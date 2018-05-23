@@ -195,7 +195,7 @@ public class Planet extends SystemObject {
             this.volatileGasInventory= volatileGasInventory(primary);
             this.surfacePressure = pressure();
 
-            if(this.surfacePressure <= 0.00001) { // TODO: May have to come back to this, was originally 0.0
+            if(this.surfacePressure <= 0.000001) { // TODO: May have to come back to this, was originally 0.0
                 this.boilingPoint = 0.0;
             } else {
                 this.boilingPoint = boilingPoint();
@@ -339,8 +339,8 @@ public class Planet extends SystemObject {
                 double yp = chems[i].boilingPoint / (373.0 * ((Math.log(pressure + 0.001) / -5050.5) + (1.0 / 373.0)));
 
                 if(yp >= 0 && yp < this.lowTemperature && chems[i].weight >= this.minimumMolecularWeight) {
-                    double vrms = rmsVelocity(chems[i].weight);
-                    double pvrms = Math.pow(1.0 / (1.0 + vrms / this.escapeVelocity), primary.age / 1e9);
+                    double vrms = rmsVelocity(chems[i].weight); // TODO: Is this in m/s or cm/s?
+                    double pvrms = Math.pow(1.0 / (1.0 + vrms / this.escapeVelocity), primary.age / 1e9); // TODO: Has this been changed to account for m/s as opposed to cm/s
                     double abund = chems[i].abundanceS;
                     double react = 1.0;
                     double fract = 1.0;
@@ -670,6 +670,9 @@ public class Planet extends SystemObject {
      */
     public double molecularLimit() {
         return (3.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / Math.pow((escapeVelocity() / GAS_RETENTION_THRESHOLD), 2.0);
+
+        // TODO: Change over to m/s from this equation
+        // return ((3.0 * MOLAR_GAS_CONST * exospheric_temp) / (pow2((esc_velocity / GAS_RETENTION_THRESHOLD) / CM_PER_METER)));
     }
 
     /**
@@ -985,12 +988,14 @@ public class Planet extends SystemObject {
     public double gasLife(double molecularWeight) {
         double v = rmsVelocity(molecularWeight);
         double g = this.surfaceGravity * EARTH_ACCELERATION;
-        double r = this.radius * CM_PER_KM;
+        // double r = this.radius * CM_PER_KM; // TODO: This should be in meters, probably?
+        double r = radiusInMeters();
         double t = (Math.pow(v, 3.0) / (2.0 * Math.pow(g, 2.0) * r)) * Math.exp((3.0 * g * r) / Math.pow(v, 2.0));
         return t / (3600.0 * 24.0 * 365.256); // convert seconds to years
     }
 
     public double minimumMolecularWeight(Star primary) {
+        // TODO: Ensure this uses molecularLimit() in m/s properly
         double
             target = primary.age,
             guess1 = molecularLimit(),

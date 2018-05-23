@@ -17,7 +17,7 @@ public abstract class SystemObject {
         CM_PER_METER = 100.0,
         MOLAR_GAS_CONST = 8314.41, // units: g*m2/(sec2*K*mol)
         GAS_RETENTION_THRESHOLD = 6.0,
-        EARTH_ACCELERATION = 9.80655, // cm per second per second?
+        EARTH_ACCELERATION = 9.80655, // m/s
         EARTH_DENSITY = 5.514, // g/cc
         FREEZING_POINT_OF_WATER = 273.15, // Units of degrees Kelvin
         EARTH_AVERAGE_CELSIUS = 14.0, // Average Earth Temperature
