@@ -1,0 +1,3 @@
+AccreteJ is a random solar system generator, a Java implementation of StarGen, which comes from an older program called Accrete. This repository is set up as an IntelliJ Idea project and mainly serves as a personal copy of this Java implementation. I had previously "translated" StarGen from C but lost the code in a hard drive crash; this will help ensure that never happens again.
+
+There was no license on the original source but I will treat it as a BSD 2-clause due to how it was distributed. Perhaps freeware with attribution? Regardless, assume this is shared in the same spirit and use at your own risk.
