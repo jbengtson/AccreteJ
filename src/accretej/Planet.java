@@ -339,8 +339,8 @@ public class Planet extends SystemObject {
                 double yp = chems[i].boilingPoint / (373.0 * ((Math.log(pressure + 0.001) / -5050.5) + (1.0 / 373.0)));
 
                 if(yp >= 0 && yp < this.lowTemperature && chems[i].weight >= this.minimumMolecularWeight) {
-                    double vrms = rmsVelocity(chems[i].weight); // TODO: Is this in m/s or cm/s?
-                    double pvrms = Math.pow(1.0 / (1.0 + vrms / this.escapeVelocity), primary.age / 1e9); // TODO: Has this been changed to account for m/s as opposed to cm/s
+                    double vrms = rmsVelocity(chems[i].weight);
+                    double pvrms = Math.pow(1.0 / (1.0 + vrms / this.escapeVelocity), primary.age / 1e9); // This should still have the correct ratio when changed to m/s.
                     double abund = chems[i].abundanceS;
                     double react = 1.0;
                     double fract = 1.0;
@@ -660,7 +660,7 @@ public class Planet extends SystemObject {
      * @return The RMS Velocity of the molecule in m/s
      */
     public double rmsVelocity(double molecularWeight) {
-        return Math.sqrt((3.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / molecularWeight);
+        return Math.sqrt((3.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / (molecularWeight / 1000.0)); // convert to kg/mol
     }
 
     /**
@@ -669,9 +669,9 @@ public class Planet extends SystemObject {
      * @return
      */
     public double molecularLimit() {
-        return (3.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / Math.pow((escapeVelocity() / GAS_RETENTION_THRESHOLD), 2.0);
-
-        // TODO: Change over to m/s from this equation
+        // the following equation based on comments from https://worldbuilding.stackexchange.com/questions/13583/what-is-the-minimum-planetary-mass-to-hold-an-atmosphere-over-geologic-time-scal
+        return (Math.log(1E9 / 9.0) * 3.0 * MOLAR_GAS_CONST * this.exosphericTemperature * radiusInMeters()) / Math.pow(mu(), 2.0);
+        // return (3.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / Math.pow((escapeVelocity() / GAS_RETENTION_THRESHOLD), 2.0);
         // return ((3.0 * MOLAR_GAS_CONST * exospheric_temp) / (pow2((esc_velocity / GAS_RETENTION_THRESHOLD) / CM_PER_METER)));
     }
 
@@ -987,15 +987,12 @@ public class Planet extends SystemObject {
      */
     public double gasLife(double molecularWeight) {
         double v = rmsVelocity(molecularWeight);
-        double g = this.surfaceGravity * EARTH_ACCELERATION;
-        // double r = this.radius * CM_PER_KM; // TODO: This should be in meters, probably?
         double r = radiusInMeters();
-        double t = (Math.pow(v, 3.0) / (2.0 * Math.pow(g, 2.0) * r)) * Math.exp((3.0 * g * r) / Math.pow(v, 2.0));
+        double t = (Math.pow(v, 3.0) / (2.0 * Math.pow(this.surfaceAcceleration, 2.0) * r)) * Math.exp((3.0 * this.surfaceAcceleration * r) / Math.pow(v, 2.0));
         return t / (3600.0 * 24.0 * 365.256); // convert seconds to years
     }
 
     public double minimumMolecularWeight(Star primary) {
-        // TODO: Ensure this uses molecularLimit() in m/s properly
         double
             target = primary.age,
             guess1 = molecularLimit(),

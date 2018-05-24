@@ -15,7 +15,8 @@ public abstract class SystemObject {
         KM_PER_AU = 149597870.7, // Both of these are set to the metric SI unit for AU
         CM_PER_KM = 100000.0,
         CM_PER_METER = 100.0,
-        MOLAR_GAS_CONST = 8314.41, // units: g*m2/(sec2*K*mol)
+        // MOLAR_GAS_CONST = 8314.41, // units: g*m2/(sec2*K*mol)
+        MOLAR_GAS_CONST = 8.3144621, // units of J/molK
         GAS_RETENTION_THRESHOLD = 6.0,
         EARTH_ACCELERATION = 9.80655, // m/s
         EARTH_DENSITY = 5.514, // g/cc
