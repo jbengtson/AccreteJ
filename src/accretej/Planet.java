@@ -347,7 +347,7 @@ public class Planet extends SystemObject {
                     double pres2 = 1.0;
 
                     if(chems[i].atomicNumber == 18) {
-                        react = .15 * primary.age/4e9;
+                        react = .15 * primary.age / 4e9;
                     } else if(chems[i].atomicNumber == 2) {
                         abund = abund * (0.001 + (this.gasMass / this.mass));
                         pres2 = (0.75 + pressure);
@@ -368,7 +368,9 @@ public class Planet extends SystemObject {
                     fract = 1.0 - (this.minimumMolecularWeight / chems[i].weight);
                     amount[i] = abund * pvrms * react * fract;
 
-/* TODO: Logging
+/* TODO: Logging */
+                    // Logger.instance().log(Logger.level.systemOut, String.format("%1$,.2f", this.mass) + "em, found: " + chems[i].symbol + " - " + String.format("%1$,.4f", amount[i]));
+/*
                     if ((flag_verbose & 0x4000) &&
                         (strcmp(gases[i].symbol, "O") == 0 ||
                             strcmp(gases[i].symbol, "N") == 0 ||
@@ -397,10 +399,10 @@ public class Planet extends SystemObject {
             }
 
             if(totalAmount > 0.0) {
-                for(int i = 0, n = 0; i < chems.length; i++) {
+                for(int i = 0; i < chems.length; i++) {
                     if(amount[i] > 0.0) {
                         this.atmosphere.add(new AtmosphericChemical(chems[i], this.surfacePressure * amount[i] / totalAmount));
-
+                        Logger.instance().log(Logger.level.systemOut, String.format("%1$,.2f", massInEarthMasses()) + "em, added: " + chems[i].symbol + " - " + String.format("%1$,.4f", amount[i]) + " " + String.format("%1$,.4f", amount[i] / totalAmount) + "%");
 /* TODO: logging
                         if (flag_verbose & 0x2000) {
                             if ((this.atmosphere[n].num == AN_O) &&
@@ -413,8 +415,6 @@ public class Planet extends SystemObject {
                             }
                         }
 */
-
-                        n++;
                     }
                 }
 
@@ -448,11 +448,11 @@ public class Planet extends SystemObject {
     }
 
     public double radiusInEarthRadii() {
-        return this.radius / EARTH_RADIUS;
+        return radiusInMeters() / EARTH_RADIUS;
     }
 
     public double ratioRadiusToEarth() {
-        return EARTH_RADIUS / this.radius;
+        return EARTH_RADIUS / radiusInMeters();
     }
 
     public int numberOfMoons() {
@@ -486,7 +486,8 @@ public class Planet extends SystemObject {
      * @return The radius of this planet in km
      */
     public double volumeRadius() {
-        return Math.pow(3.0 * (massInGrams() / this.density) / (4.0 * Math.PI), 1.0 / 3.0) / CM_PER_KM;
+        return Math.pow(((massInGrams() / this.density) / Math.PI) * (3.0 / 4.0), 1.0 / 3.0) / CM_PER_KM;
+        // return Math.pow(3.0 * (massInGrams() / this.density) / (4.0 * Math.PI), 1.0 / 3.0) / CM_PER_KM;
     }
 
     /**
@@ -609,7 +610,7 @@ public class Planet extends SystemObject {
         baseAngularVelocity = Math.sqrt(2.0 * J * massInGrams() / (k2 * Math.pow(radius * CM_PER_KM, 2.0)));
 
         // This next calculation determines how much the planet's rotation is slowed by the presence of the star.
-        changeInAngularVelocity = CHANGE_IN_EARTH_ANGULAR_VELOCITY * (this.density / EARTH_DENSITY) * ((this.radius * CM_PER_KM) / EARTH_RADIUS) * (1.0 / massInEarthMasses()) * Math.pow(primary.mass, 2.0) * (1.0 / Math.pow(this.sma, 6.0));
+        changeInAngularVelocity = CHANGE_IN_EARTH_ANGULAR_VELOCITY * (this.density / EARTH_DENSITY) * (radiusInMeters() / EARTH_RADIUS) * (1.0 / massInEarthMasses()) * Math.pow(primary.mass, 2.0) * (1.0 / Math.pow(this.sma, 6.0));
         angularVelocity = baseAngularVelocity + (changeInAngularVelocity * primary.age);
         if(angularVelocity <= 0.0) {
             stopped = true;
@@ -670,7 +671,7 @@ public class Planet extends SystemObject {
      */
     public double molecularLimit() {
         // the following equation based on comments from https://worldbuilding.stackexchange.com/questions/13583/what-is-the-minimum-planetary-mass-to-hold-an-atmosphere-over-geologic-time-scal
-        return (Math.log(1E9 / 9.0) * 3.0 * MOLAR_GAS_CONST * this.exosphericTemperature * radiusInMeters()) / Math.pow(mu(), 2.0);
+        return (3.0 * MOLAR_GAS_CONST * this.exosphericTemperature * radiusInMeters()) / Math.pow(mu(), 2.0);
         // return (3.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / Math.pow((escapeVelocity() / GAS_RETENTION_THRESHOLD), 2.0);
         // return ((3.0 * MOLAR_GAS_CONST * exospheric_temp) / (pow2((esc_velocity / GAS_RETENTION_THRESHOLD) / CM_PER_METER)));
     }
@@ -1333,12 +1334,12 @@ public class Planet extends SystemObject {
         } else {
             if(this.habitable) {
                 if(this.earthlike) {
-                    return planetType() + " (earthlike) " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
+                    return planetType() + " (earthlike " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
                 } else {
-                    return planetType() + " (habitable) " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
+                    return planetType() + " (habitable " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
                 }
             } else {
-                return planetType() + " (" + atmosphereType() + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
+                return planetType() + " (" + atmosphereType() + " " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
             }
         }
     }

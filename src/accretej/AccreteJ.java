@@ -3,7 +3,10 @@ package accretej;
 public class AccreteJ {
     public static void main(String[] args) {
         boolean habitable = false;
-        System s;
+        System s = new System(true, false, false);;
+        java.lang.System.out.println(s);
+
+        /*
         while(!habitable) {
             s = new System(true, false, false);
             if(s.habitable) {
@@ -11,5 +14,6 @@ public class AccreteJ {
                 java.lang.System.out.println(s);
             }
         }
+        */
     }
 }
