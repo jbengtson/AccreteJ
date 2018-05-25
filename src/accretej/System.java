@@ -553,7 +553,7 @@ public class System {
         Planet temp = planetHead;
         int i = 1;
         while(temp != null) {
-            str = str.concat("  Planet " + i++ + ": " + temp + "\n");
+            str = str.concat("  Planet " + String.format("%02d", i++) + ": " + temp + "\n");
             temp = temp.next;
         }
         return str;
