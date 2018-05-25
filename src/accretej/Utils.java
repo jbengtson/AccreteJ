@@ -23,6 +23,7 @@ class Utils {
         White,
         Giant;
     private static Chemical[] Chemtable;
+    private static long seed;
 
     public final static double
         ECCENTRICITY_COEFF = 0.077,
@@ -33,7 +34,9 @@ class Utils {
 
     private Utils() {
         // we want to initialize the random instance.
-        random = new Random(java.lang.System.currentTimeMillis());
+        seed = java.lang.System.currentTimeMillis();
+        random = new Random(seed);
+        // random = new Random(1003); // This seed with a G-type star will produce a habitable planet, good for baseline testing.
         loadChemicals();
         loadStars();
     }
@@ -43,6 +46,10 @@ class Utils {
             instance = new Utils();
         }
         return instance;
+    }
+
+    public long getSeed() {
+        return seed;
     }
 
     public double randomNumber(double inner, double outer) {

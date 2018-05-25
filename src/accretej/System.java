@@ -38,7 +38,7 @@ public class System {
         this.verbose = verbose;
         this.extraVerbose = extraVerbose;
         // centralBody = Utils.instance().randomStar();
-        centralBody = Utils.instance().randomGStar();
+        centralBody = Utils.instance().randomKStar();
         centralBody.setAge();
         distributePlanetaryMasses();
         migratePlanets();
@@ -546,14 +546,16 @@ public class System {
     }
 
     public String toString() {
-        String str = "New System\n";
-        str = str.concat("Primary: " + centralBody.toString() + "\n");
-        str = str.concat("Failed planets: " + numberOfFailedPlanets() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfFailedPlanets())) + "EM)\n");
-        str = str.concat("Escaped Moons: " + numberOfEscapedMoons() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfEscapedMoons())) + "EM)\n");
+        String cr = java.lang.System.lineSeparator();
+        String str = "New System (seed: " + Utils.instance().getSeed() + ")" + cr;
+        str = str.concat("Primary: " + centralBody.toString() + cr);
+        str = str.concat("Failed planets: " + numberOfFailedPlanets() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfFailedPlanets())) + "EM)" + cr);
+        str = str.concat("Escaped Moons: " + numberOfEscapedMoons() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfEscapedMoons())) + "EM)" + cr);
+        str = str.concat(cr);
         Planet temp = planetHead;
         int i = 1;
         while(temp != null) {
-            str = str.concat("  Planet " + String.format("%02d", i++) + ": " + temp + "\n");
+            str = str.concat("  Planet " + String.format("%02d", i++) + ": " + temp + cr);
             temp = temp.next;
         }
         return str;

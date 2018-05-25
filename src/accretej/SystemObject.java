@@ -163,8 +163,20 @@ public abstract class SystemObject {
         return (int)(sec / 3600.0);
     }
 
+    public double secondsToHours(double sec) {
+        return sec / 3600.0;
+    }
+
     public int secondsToDaysRounded(double sec) {
-        return secondsToHoursRounded(sec) * 24;
+        return (int)(sec / 86400);
+    }
+
+    public double secondsToDays(double sec) {
+        return sec / 86400.0;
+    }
+
+    public double secondsToYears(double sec) {
+        return sec / 31557600;
     }
 
     /**

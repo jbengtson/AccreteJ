@@ -369,7 +369,7 @@ public class Planet extends SystemObject {
                     amount[i] = abund * pvrms * react * fract;
 
 /* TODO: Logging */
-                    Logger.instance().log(Logger.level.systemOut, String.format("%1$,.2f", massInEarthMasses()) + "em, found: " + chems[i].symbol + " - " + String.format("%1$,.4f", amount[i]));
+//                    Logger.instance().log(Logger.level.systemOut, String.format("%1$,.2f", massInEarthMasses()) + "em, found: " + chems[i].symbol + " - " + String.format("%1$,.4f", amount[i]));
 /*
                     if ((flag_verbose & 0x4000) &&
                         (strcmp(gases[i].symbol, "O") == 0 ||
@@ -670,7 +670,7 @@ public class Planet extends SystemObject {
      */
     public double molecularLimit() {
         // The molar gas constant in the original was in grams rather than kilograms, hence the multiplication by 3000 instead of 3.
-        double muResult = Math.pow(Math.sqrt(2.0 * mu() / radiusInMeters()) / GAS_RETENTION_THRESHOLD, 2.0);
+        double muResult = Math.pow(escapeVelocity() / GAS_RETENTION_THRESHOLD, 2.0);
         return (3000.0 * MOLAR_GAS_CONST * this.exosphericTemperature) / muResult;
     }
 
@@ -1326,7 +1326,64 @@ public class Planet extends SystemObject {
         }
     }
 
+    public String datasheet() {
+        return datasheet("");
+    }
+
+    public String datasheet(String prepend) {
+        String cr = java.lang.System.lineSeparator();
+        String retval = "";
+        if(this.isMoon) {
+            retval = cr + prepend + "Moon: " + planetType();
+        } else {
+            retval = prepend + planetType();
+        }
+        if(!this.gasGiant) {
+            if(this.habitable) {
+                if(this.earthlike) {
+                    retval += " (earthlike)";
+                } else {
+                    retval += " (habitable)";
+                }
+            } else {
+                retval += " (" + atmosphereType() + ")";
+            }
+        }
+        retval += cr + prepend + "  Mass: " + (this.gasGiant ? String.format("%1$,.2f", massInJupiterMasses()) + " jm, " : "") + String.format("%1$,.2f", massInEarthMasses()) + " em, " + String.format("%.3E", massInKg()) + " kg, density - " + String.format("%1$,.2f", this.density) + " g/cc";
+        retval += cr + prepend + "  Orbit: SMA - " + String.format("%1$,.2f", this.sma) + " AU, eccentricity - " + String.format("%1$,.3f", this.eccentricity) + ", apoapsis: " + String.format("%1$,.4f", apoapsis()) + " AU, periapsis: " + String.format("%1$,.2f", periapsis()) + " AU";
+        retval += cr + prepend + "  Axial Tilt: " + String.format("%1$,.2f", this.axialTilt) + ", Day: " + String.format("%1$,.2f", secondsToHours(this.dayLength)) + " hours, Year: " + String.format("%1$,.2f", secondsToYears(this.orbitalPeriod)) + " Earth years";
+        if(!this.gasGiant) {
+            retval += cr + prepend + "  Surface: Gravity - " + String.format("%1$,.2f", this.surfaceGravity) + ", Temperature - " + String.format("%1$,.2f", this.surfaceTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.surfaceTemperature * (9.0 / 5.0) - 459.67) + "F)";
+            retval += cr + prepend + "  Water: " + String.format("%1$,.2f", this.hydrosphere * 100.0) + "%, Cloud Cover: " + String.format("%1$,.2f", this.cloudCover * 100.0) + "%, Ice Cover: " + String.format("%1$,.2f", this.iceCover * 100.0) + "%";
+        }
+        if(this.atmosphere != null) {
+            if(this.atmosphere.size() > 0) {
+                retval += cr + prepend + "  Atmosphere: Pressure - " + String.format("%1$,.2f", this.surfacePressure / 1000.0) + " bar";
+                retval += cr + prepend + "  Atmospheric Constituents:";
+                AtmosphericChemical ac;
+                Iterator<AtmosphericChemical> i = atmosphere.iterator();
+                while(i.hasNext()) {
+                    ac = i.next();
+                    retval += cr + prepend + "    " + ac.chem.symbol + " (" + ac.chem.name + ") " + String.format("%1$,.4f", ac.surfacePressure / 1000.0) + " bar";
+                }
+            }
+        }
+        // cap it off for the next planet
+        retval += cr;
+        return retval;
+    }
+
     public String toString() {
+        String retval = datasheet();
+        if(this.moonHead != null) {
+            Planet p = this.moonHead;
+            while(p != null) {
+                retval += p.datasheet("    ");
+                p = p.next;
+            }
+        }
+        return retval;
+        /*
         String retval = "";
         if(this.gasGiant) {
             retval = planetType() + " " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInJupiterMasses()) + " jm, " + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
@@ -1341,13 +1398,6 @@ public class Planet extends SystemObject {
                 retval = planetType() + " (" + atmosphereType() + " " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
             }
         }
-        if(this.moonHead != null) {
-            Planet p = this.moonHead;
-            while(p != null) {
-                retval += "\n       Moon: " + p.toString();
-                p = p.next;
-            }
-        }
-        return retval;
+        */
     }
 }
