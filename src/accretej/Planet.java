@@ -48,6 +48,7 @@ public class Planet extends SystemObject {
     protected Planet
         next = null,
         moonHead = null;
+    protected Star primary;
     protected Vector<AtmosphericChemical> atmosphere = new Vector<AtmosphericChemical>();
 
     protected enum atmosphereType {
@@ -72,11 +73,15 @@ public class Planet extends SystemObject {
         tTidallyLocked
     }
 
+    public Planet(Star primary) {
+        this.primary = primary;
+    }
+
     /**
      * Performs finalizing calculation on the planet based on its given parameters.
      * Make all necessary changes to sma, eccentricity, various masses, etc... before running this.
      */
-    public void finalize(Star primary, boolean doMoons) {
+    public void finalize(boolean doMoons) {
         this.surfaceTemperature = 0.0;
         this.highTemperature = 0.0;
         this.lowTemperature = 0.0;
@@ -84,21 +89,21 @@ public class Planet extends SystemObject {
         this.minTemperature = 0.0;
         this.greenhouseRise = 0.0;
         this.resonantPeriod = false;
-        this.orbitalZone = orbitalZone(primary.luminosity);
-        this.orbitalPeriod = orbitalPeriod(primary);
+        this.orbitalZone = orbitalZone(this.primary.luminosity);
+        this.orbitalPeriod = orbitalPeriod(this.primary);
         this.axialTilt = axialTilt();
-        this.exosphericTemperature = EARTH_EXOSPHERIC_TEMPERATURE / Math.pow(this.sma / primary.radiusEcosphere, 2.0);
+        this.exosphericTemperature = EARTH_EXOSPHERIC_TEMPERATURE / Math.pow(this.sma / this.primary.radiusEcosphere, 2.0);
         this.rmsVelocity = rmsVelocity(MOLECULAR_NITROGEN);
         this.coreRadius = kothariRadius();
 
         // Calculate the radius as a gas giant, to verify it will retain gas. Then if mass > Earth,
         // it's at least 5% gas, and retains He, it's some flavor of gas giant.
 
-        this.density = empiricalDensity(primary.radiusEcosphere);
+        this.density = empiricalDensity(this.primary.radiusEcosphere);
         this.radius = volumeRadius();
         this.surfaceAcceleration = gravitationalAcceleration();
         this.surfaceGravity = gravity();
-        this.minimumMolecularWeight = minimumMolecularWeight(primary);
+        this.minimumMolecularWeight = minimumMolecularWeight();
 
         if(massInEarthMasses() > 1.0 && this.gasMass / this.mass > 0.05 && this.minimumMolecularWeight <= 4.0) {
             // Gas Giant Planet
@@ -123,16 +128,16 @@ public class Planet extends SystemObject {
                 double heLife = gasLife(HELIUM);
                 double h2Loss, heLoss;
 
-                if(h2Life < primary.age) {
-                    h2Loss = (1.0 - (1.0 / Math.exp(primary.age / h2Life))) * h2Mass;
+                if(h2Life < this.primary.age) {
+                    h2Loss = (1.0 - (1.0 / Math.exp(this.primary.age / h2Life))) * h2Mass;
                     this.gasMass -= h2Loss;
                     this.mass -= h2Loss;
                     this.surfaceAcceleration = gravitationalAcceleration();
                     this.surfaceGravity = gravity();
                 }
 
-                if(heLife < primary.age) {
-                    heLoss = (1.0 - (1.0 / Math.exp(primary.age / heLife))) * heMass;
+                if(heLife < this.primary.age) {
+                    heLoss = (1.0 - (1.0 / Math.exp(this.primary.age / heLife))) * heMass;
                     this.gasMass -= heLoss;
                     this.mass -= heLoss;
                     this.surfaceAcceleration = gravitationalAcceleration();
@@ -146,7 +151,7 @@ public class Planet extends SystemObject {
             }
         }
 
-        this.dayLength = dayLength(primary);
+        this.dayLength = dayLength();
         this.escapeVelocity = escapeVelocity();
 
         if(this.type == planetType.tGasGiant || this.type == planetType.tSubGasGiant || this.type == planetType.tSubSubGasGiant) {
@@ -161,12 +166,12 @@ public class Planet extends SystemObject {
             this.cloudCover = 1.0;
             this.iceCover = 0.0;
             this.surfaceGravity = gravity();
-            this.minimumMolecularWeight = minimumMolecularWeight(primary);
+            this.minimumMolecularWeight = minimumMolecularWeight();
             this.surfaceGravity = Double.MAX_VALUE;
-            this.estimatedTemperature = estimatedTemperature(primary);
-            this.estimatedTerrestrialTemperature = estimatedTerrestrialTemperature(primary);
+            this.estimatedTemperature = estimatedTemperature();
+            this.estimatedTerrestrialTemperature = estimatedTerrestrialTemperature();
 
-            if(this.estimatedTerrestrialTemperature >= FREEZING_POINT_OF_WATER && this.estimatedTerrestrialTemperature <= EARTH_AVERAGE_KELVIN + 10.0 && primary.age > 2.0E9) {
+            if(this.estimatedTerrestrialTemperature >= FREEZING_POINT_OF_WATER && this.estimatedTerrestrialTemperature <= EARTH_AVERAGE_KELVIN + 10.0 && this.primary.age > 2.0E9) {
                 this.habitableJovian = true;
 
                 /* TODO: Logging singleton
@@ -187,12 +192,12 @@ public class Planet extends SystemObject {
                 */
             }
         } else {
-            this.estimatedTemperature = estimatedTemperature(primary);
-            this.estimatedTerrestrialTemperature = estimatedTerrestrialTemperature(primary);
+            this.estimatedTemperature = estimatedTemperature();
+            this.estimatedTerrestrialTemperature = estimatedTerrestrialTemperature();
             this.surfaceGravity = gravity();
-            this.minimumMolecularWeight = minimumMolecularWeight(primary);
-            this.greenhouseEffect = greenhouse(primary);
-            this.volatileGasInventory= volatileGasInventory(primary);
+            this.minimumMolecularWeight = minimumMolecularWeight();
+            this.greenhouseEffect = greenhouse();
+            this.volatileGasInventory= volatileGasInventory();
             this.surfacePressure = pressure();
 
             if(this.surfacePressure <= 0.000001) { // TODO: May have to come back to this, was originally 0.0
@@ -201,10 +206,10 @@ public class Planet extends SystemObject {
                 this.boilingPoint = boilingPoint();
             }
 
-            iterateSurfaceTemperature(primary);
+            iterateSurfaceTemperature();
 
             if(this.maxTemperature >= FREEZING_POINT_OF_WATER && this.minTemperature <= this.boilingPoint) {
-                calculateGases(primary);
+                calculateGases();
             }
 
             if(this.surfacePressure < 1.0) {
@@ -259,13 +264,13 @@ public class Planet extends SystemObject {
                 Planet p = this.moonHead;
 
                 while(p != null) {
-                    if(p.massInEarthMasses() > .000001) {
+                    if(p.massInEarthMasses() > 0.000001) {
                         p.sma = this.sma;
                         p.eccentricity = this.eccentricity;
-                        p.finalize(primary, false);
+                        p.finalize(false);
 
                         double rocheLimit = 2.44 * this.radius * Math.pow(this.density / p.density, 1.0 / 3.0);
-                        double hillSphere = this.sma * KM_PER_AU * Math.pow(this.mass / (3.0 * primary.mass), 1.0 / 3.0);
+                        double hillSphere = this.sma * KM_PER_AU * Math.pow(this.mass / (3.0 * this.primary.mass), 1.0 / 3.0);
 
                         if(rocheLimit * 3.0 < hillSphere) {
                             p.asMoonSMA = Utils.instance().randomNumber(rocheLimit * 1.5, hillSphere / 2.0) / KM_PER_AU;
@@ -328,7 +333,7 @@ public class Planet extends SystemObject {
         }
     }
 
-    public void calculateGases(Star primary) {
+    public void calculateGases() {
         if(this.surfacePressure > 0.0) {
             Chemical[] chems = Utils.instance().getChemicals();
             double amount[] = new double[chems.length];
@@ -340,29 +345,29 @@ public class Planet extends SystemObject {
 
                 if((yp >= 0.0 && yp < this.lowTemperature) && chems[i].weight >= this.minimumMolecularWeight) {
                     double vrms = rmsVelocity(chems[i].weight);
-                    double pvrms = Math.pow(1.0 / (1.0 + vrms / this.escapeVelocity), primary.age / 1e9); // This should still have the correct ratio when changed to m/s.
+                    double pvrms = Math.pow(1.0 / (1.0 + vrms / this.escapeVelocity), this.primary.age / 1e9); // This should still have the correct ratio when changed to m/s.
                     double abund = chems[i].abundanceS;
                     double react = 1.0;
                     double fract = 1.0;
                     double pres2 = 1.0;
 
                     if(chems[i].atomicNumber == 18) {
-                        react = .15 * primary.age / 4e9;
+                        react = .15 * this.primary.age / 4e9;
                     } else if(chems[i].atomicNumber == 2) {
                         abund = abund * (0.001 + (this.gasMass / this.mass));
                         pres2 = (0.75 + pressure);
-                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), primary.age / 2e9 * pres2);
-                    } else if((chems[i].atomicNumber == 8 || chems[i].atomicNumber == 912) && primary.age > 2e9 && this.surfaceTemperature > 270.0 && this.surfaceTemperature < 400.0) {
+                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), this.primary.age / 2e9 * pres2);
+                    } else if((chems[i].atomicNumber == 8 || chems[i].atomicNumber == 912) && this.primary.age > 2e9 && this.surfaceTemperature > 270.0 && this.surfaceTemperature < 400.0) {
                         /*	pres2 = (0.65 + pressure/2); Breathable - M: .55-1.4 */
                         pres2 = (0.89 + pressure / 4); /*	Breathable - M: .6 -1.8 */
-                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), Math.pow(primary.age / 2e9, 0.25) * pres2);
-                    } else if(chems[i].atomicNumber == 902 && primary.age > 2e9 && this.surfaceTemperature > 270 && this.surfaceTemperature < 400) {
+                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), Math.pow(this.primary.age / 2e9, 0.25) * pres2);
+                    } else if(chems[i].atomicNumber == 902 && this.primary.age > 2e9 && this.surfaceTemperature > 270 && this.surfaceTemperature < 400) {
                         pres2 = (0.75 + pressure);
-                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), Math.pow(primary.age / 2e9, 0.5) * pres2);
+                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), Math.pow(this.primary.age / 2e9, 0.5) * pres2);
                         react *= 1.5;
                     } else {
                         pres2 = (0.75 + pressure);
-                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), primary.age / 2e9 * pres2);
+                        react = Math.pow(1.0 / (1.0 + chems[i].reactivity), this.primary.age / 2e9 * pres2);
                     }
 
                     fract = 1.0 - (this.minimumMolecularWeight / chems[i].weight);
@@ -455,7 +460,7 @@ public class Planet extends SystemObject {
     }
 
     public int numberOfMoons() {
-        return Utils.instance().countPlanets(this.moonHead);
+        return System.countPlanets(this.moonHead);
     }
 
     public void append(Planet p) {
@@ -592,7 +597,7 @@ public class Planet extends SystemObject {
      * take that into account. This is used to find 'changeInAngularVelocity' below.
      * @return The length of this planet's rotation in seconds.
      */
-    public double dayLength(Star primary) {
+    public double dayLength() {
         final double
             J = 1.46E-19, // Used in day-length calcs (cm2/sec2 g)
             CHANGE_IN_EARTH_ANGULAR_VELOCITY = -1.3E-15; // Units of radians/sec/year
@@ -609,8 +614,8 @@ public class Planet extends SystemObject {
         baseAngularVelocity = Math.sqrt(2.0 * J * massInGrams() / (k2 * Math.pow(radius * CM_PER_KM, 2.0)));
 
         // This next calculation determines how much the planet's rotation is slowed by the presence of the star.
-        changeInAngularVelocity = CHANGE_IN_EARTH_ANGULAR_VELOCITY * (this.density / EARTH_DENSITY) * (radiusInMeters() / EARTH_RADIUS) * (1.0 / massInEarthMasses()) * Math.pow(primary.mass, 2.0) * (1.0 / Math.pow(this.sma, 6.0));
-        angularVelocity = baseAngularVelocity + (changeInAngularVelocity * primary.age);
+        changeInAngularVelocity = CHANGE_IN_EARTH_ANGULAR_VELOCITY * (this.density / EARTH_DENSITY) * (radiusInMeters() / EARTH_RADIUS) * (1.0 / massInEarthMasses()) * Math.pow(this.primary.mass, 2.0) * (1.0 / Math.pow(this.sma, 6.0));
+        angularVelocity = baseAngularVelocity + (changeInAngularVelocity * this.primary.age);
         if(angularVelocity <= 0.0) {
             stopped = true;
             dayInSeconds = Double.MAX_VALUE;
@@ -691,10 +696,9 @@ public class Planet extends SystemObject {
 
     /**
      * This implements Fogg's eq.17.  The 'inventory' returned is unitless.
-     * @param primary The primary for this planet.
      * @return The unitless "inventory".
      */
-    public double volatileGasInventory(Star primary) {
+    public double volatileGasInventory() {
         double proportionalConst, temp;
 
         double velocityRatio = this.escapeVelocity / this.rmsVelocity;
@@ -714,7 +718,7 @@ public class Planet extends SystemObject {
                 // printf("Error: orbital zone not initialized correctly!\n");
                 break;
             }
-            temp = (proportionalConst * massInEarthMasses()) / primary.mass;
+            temp = (proportionalConst * massInEarthMasses()) / this.primary.mass;
             /* TODO: I'm sure the original author had something in mind here...
             temp2 = Utils.instance().about(temp1, 0.2);
             temp2 = temp; // what? */
@@ -819,29 +823,26 @@ public class Planet extends SystemObject {
 
     /**
      * This is Fogg's eq.19.
-     * @param primary The star this planet orbits.
      * @return The temperature in Kelvin.
      */
-    public double effectiveTemperature(Star primary, double givenAlbedo) {
+    public double effectiveTemperature(double givenAlbedo) {
         final double EARTH_EFFECTIVE_TEMP = 250.0; // Units of degrees Kelvin (was 255)
 
-        return Math.sqrt(primary.radiusEcosphere / this.sma) * Math.sqrt(Math.sqrt((1.0 - givenAlbedo) / (1.0 - EARTH_ALBEDO))) * EARTH_EFFECTIVE_TEMP;
+        return Math.sqrt(this.primary.radiusEcosphere / this.sma) * Math.sqrt(Math.sqrt((1.0 - givenAlbedo) / (1.0 - EARTH_ALBEDO))) * EARTH_EFFECTIVE_TEMP;
     }
 
     /**
-     * @param primary The star this planet orbits.
      * @return The temperature in Kelvin.
      */
-    public double estimatedTemperature(Star primary) {
-        return Math.sqrt(primary.radiusEcosphere / this.sma) * Math.sqrt(Math.sqrt((1.0 - this.albedo) / (1.0 - EARTH_ALBEDO))) * EARTH_AVERAGE_KELVIN;
+    public double estimatedTemperature() {
+        return Math.sqrt(this.primary.radiusEcosphere / this.sma) * Math.sqrt(Math.sqrt((1.0 - this.albedo) / (1.0 - EARTH_ALBEDO))) * EARTH_AVERAGE_KELVIN;
     }
 
     /**
-     * @param primary The star this planet orbits.
      * @return The temperature in Kelvin.
      */
-    public double estimatedTerrestrialTemperature(Star primary) {
-        return Math.sqrt(primary.radiusEcosphere / this.sma) * EARTH_AVERAGE_KELVIN;
+    public double estimatedTerrestrialTemperature() {
+        return Math.sqrt(this.primary.radiusEcosphere / this.sma) * EARTH_AVERAGE_KELVIN;
     }
 
     /**
@@ -855,11 +856,10 @@ public class Planet extends SystemObject {
      * it's too hot, the water will never condense out of the atmosphere, rain down and form an
      * ocean. The albedo used here was chosen so that the boundary is about the same as the old
      * method Neither zone, nor r_greenhouse are used in this version - JLB
-     * @param primary The star this planet orbits
      * @return Whether a greenhouse effect exists
      */
-    boolean greenhouse(Star primary) {
-        if(effectiveTemperature(primary, GREENHOUSE_TRIGGER_ALBEDO) > FREEZING_POINT_OF_WATER) {
+    boolean greenhouse() {
+        if(effectiveTemperature(GREENHOUSE_TRIGGER_ALBEDO) > FREEZING_POINT_OF_WATER) {
             return true;
         } else {
             return false;
@@ -991,9 +991,9 @@ public class Planet extends SystemObject {
         return t / (3600.0 * 24.0 * 365.256); // convert seconds to years
     }
 
-    public double minimumMolecularWeight(Star primary) {
+    public double minimumMolecularWeight() {
         double
-            target = primary.age,
+            target = this.primary.age,
             guess1 = molecularLimit(),
             guess2 = guess1,
             life = gasLife(guess1);
@@ -1039,7 +1039,7 @@ public class Planet extends SystemObject {
     /*		 planet->boil_point													*/
     /*--------------------------------------------------------------------------*/
 
-    public void calculateSurfaceTemperature(Star primary, boolean first, double lastWater, double lastClouds, double lastIce, double lastTemperature, double lastAlbedo) {
+    public void calculateSurfaceTemperature(boolean first, double lastWater, double lastClouds, double lastIce, double lastTemperature, double lastAlbedo) {
         double effectiveTemperature;
         double waterRaw; // this is used for logging purposes.
         double cloudsRaw; // this is used for logging purposes.
@@ -1048,7 +1048,7 @@ public class Planet extends SystemObject {
 
         if(first) {
             this.albedo = EARTH_ALBEDO;
-            effectiveTemperature = effectiveTemperature(primary, this.albedo);
+            effectiveTemperature = effectiveTemperature(this.albedo);
             greenhouseTemperature = greenhouseRise(effectiveTemperature);
             this.surfaceTemperature = effectiveTemperature + greenhouseTemperature;
             setTemperatureRange();
@@ -1064,7 +1064,7 @@ public class Planet extends SystemObject {
                     planet->boil_point);
             */
             this.greenhouseEffect = false;
-            this.volatileGasInventory = volatileGasInventory(primary);
+            this.volatileGasInventory = volatileGasInventory();
             this.surfacePressure = pressure();
             this.boilingPoint = boilingPoint();
         }
@@ -1093,7 +1093,7 @@ public class Planet extends SystemObject {
         }
 
         this.albedo = planetAlbedo();
-        effectiveTemperature = effectiveTemperature(primary, this.albedo);
+        effectiveTemperature = effectiveTemperature(this.albedo);
         greenhouseTemperature = greenhouseRise(effectiveTemperature);
         this.surfaceTemperature = effectiveTemperature + greenhouseTemperature;
 
@@ -1125,8 +1125,8 @@ public class Planet extends SystemObject {
         */
     }
 
-    public void iterateSurfaceTemperature(Star primary) {
-        double initialTemperature = estimatedTemperature(primary);
+    public void iterateSurfaceTemperature() {
+        double initialTemperature = estimatedTemperature();
 
         /* TODO: This stuff might be better added to a logger singleton.
         double h2Life = gasLife(MOLECULAR_HYDROGEN);
@@ -1146,7 +1146,7 @@ public class Planet extends SystemObject {
                 h2_life, h2o_life, n_life, n2_life);
         */
 
-        calculateSurfaceTemperature(primary, true, 0.0, 0.0, 0.0, 0.0, 0.0);
+        calculateSurfaceTemperature(true, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         for(int count = 0; count <= 25; count++) {
             double lastWater = this.hydrosphere;
@@ -1155,7 +1155,7 @@ public class Planet extends SystemObject {
             double lastTemperature = this.surfaceTemperature;
             double lastAlbedo = this.albedo;
 
-            calculateSurfaceTemperature(primary, false, lastWater, lastClouds, lastIce, lastTemperature, lastAlbedo);
+            calculateSurfaceTemperature(false, lastWater, lastClouds, lastIce, lastTemperature, lastAlbedo);
 
             if(Math.abs(this.surfaceTemperature - lastTemperature) < 0.25) {
                 break;
@@ -1349,12 +1349,21 @@ public class Planet extends SystemObject {
                 retval += " (" + atmosphereType() + ")";
             }
         }
-        retval += cr + prepend + "  Mass: " + (this.gasGiant ? String.format("%1$,.2f", massInJupiterMasses()) + " jm, " : "") + String.format("%1$,.2f", massInEarthMasses()) + " em, " + String.format("%.3E", massInKg()) + " kg, density - " + String.format("%1$,.2f", this.density) + " g/cc";
-        retval += cr + prepend + "  Orbit: SMA - " + String.format("%1$,.2f", this.sma) + " AU, eccentricity - " + String.format("%1$,.3f", this.eccentricity) + ", apoapsis: " + String.format("%1$,.4f", apoapsis()) + " AU, periapsis: " + String.format("%1$,.2f", periapsis()) + " AU";
+        if(this.resonantPeriod) {
+            retval += " - tidally locked or resonant period.";
+        }
+        retval += cr + prepend + "  Mass: " + (this.gasGiant ? String.format("%1$,.2f", massInJupiterMasses()) + " jm, " : "") + String.format("%1$,.2f", massInEarthMasses()) + " em, " + String.format("%.3E", massInKg()) + " kg, density - " + String.format("%1$,.2f", this.density) + " g/cc, radius - " + String.format("%1$,.2f", radiusInMeters() / 1000.0) + "km";
+        if(this.isMoon) {
+            retval += cr + prepend + "  Orbit: SMA - " + String.format("%.3E", AUtoKm(this.asMoonSMA)) + " km, eccentricity - " + String.format("%1$,.3f", this.asMoonEccentricty) + ", apoapsis: " + String.format("%.3E", AUtoKm(asMoonApoapsis())) + " km, periapsis: " + String.format("%.3E", AUtoKm(asMoonPeriapsis())) + " km";
+        } else {
+            retval += cr + prepend + "  Orbit: SMA - " + String.format("%1$,.2f", this.sma) + " AU, eccentricity - " + String.format("%1$,.3f", this.eccentricity) + ", apoapsis: " + String.format("%1$,.4f", apoapsis()) + " AU, periapsis: " + String.format("%1$,.2f", periapsis()) + " AU";
+        }
+        // TODO: Fix the following values for moons so that they correctly use their moon SMA and eccentricity
         retval += cr + prepend + "  Axial Tilt: " + String.format("%1$,.2f", this.axialTilt) + ", Day: " + String.format("%1$,.2f", secondsToHours(this.dayLength)) + " hours, Year: " + String.format("%1$,.2f", secondsToYears(this.orbitalPeriod)) + " Earth years";
         if(!this.gasGiant) {
             retval += cr + prepend + "  Surface: Gravity - " + String.format("%1$,.2f", this.surfaceGravity) + ", Temperature - " + String.format("%1$,.2f", this.surfaceTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.surfaceTemperature * (9.0 / 5.0) - 459.67) + "F)";
             retval += cr + prepend + "  Water: " + String.format("%1$,.2f", this.hydrosphere * 100.0) + "%, Cloud Cover: " + String.format("%1$,.2f", this.cloudCover * 100.0) + "%, Ice Cover: " + String.format("%1$,.2f", this.iceCover * 100.0) + "%";
+            retval += cr + prepend + "  Min Temperature - " + String.format("%1$,.2f", this.minTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.minTemperature * (9.0 / 5.0) - 459.67) + "F), Low Temperature - " + String.format("%1$,.2f", this.lowTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.lowTemperature * (9.0 / 5.0) - 459.67) + "F), High Temperature - " + String.format("%1$,.2f", this.highTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.highTemperature * (9.0 / 5.0) - 459.67) + "F), Max Temperature - " + String.format("%1$,.2f", this.maxTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.maxTemperature * (9.0 / 5.0) - 459.67) + "F)";
         }
         if(this.atmosphere != null) {
             if(this.atmosphere.size() > 0) {

@@ -41,6 +41,7 @@ public class System {
         centralBody = Utils.instance().randomKStar();
         centralBody.setAge();
         distributePlanetaryMasses();
+        checkMasses();
         migratePlanets();
         setEnvironments();
     }
@@ -83,7 +84,7 @@ public class System {
                     coalescePlanetesimals(sma, ecc, mass, criticalMass, dustMass.value, gasMass.value, innerBound, outerBound);
                 } else {
                     // save the failed planetesimal
-                    Planet p = new Planet();
+                    Planet p = new Planet(this.centralBody);
                     p.sma = sma;
                     p.eccentricity = ecc;
                     p.mass = dustMass.value + gasMass.value;
@@ -358,7 +359,7 @@ public class System {
 
                     if(mass < criticalMass) {
                         if(SystemObject.massInEarthMasses(mass) < 2.5 && SystemObject.massInEarthMasses(mass) > .0001 && existingMass < thePlanet.mass * .05) {
-                            Planet theMoon = new Planet();
+                            Planet theMoon = new Planet(this.centralBody);
 
                             theMoon.sma = sma;
                             theMoon.eccentricity = ecc;
@@ -396,7 +397,7 @@ public class System {
                             }
                         } else {
                             // save the moon
-                            Planet p = new Planet();
+                            Planet p = new Planet(this.centralBody);
                             p.sma = sma;
                             p.eccentricity = ecc;
                             p.mass = dustMass + gasMass;
@@ -467,7 +468,7 @@ public class System {
         }
 
         if(!finished) { // Planetesimals didn't collide. Make it a planet.
-            thePlanet = new Planet();
+            thePlanet = new Planet(this.centralBody);
 
             thePlanet.sma = sma;
             thePlanet.eccentricity = ecc;
@@ -499,6 +500,75 @@ public class System {
         }
     }
 
+    private void checkMasses() {
+        // ensure the planetary mass is equal to dust mass plus gas mass
+        /* TODO: This completely screws up the planetary generation process, but why?
+        Planet p = this.planetHead;
+        while(p != null) {
+            p.mass = p.dustMass + p.gasMass;
+            if(p.moonHead != null) {
+                Planet m = p.moonHead;
+                while(m != null) {
+                    m.mass = m.dustMass + m.gasMass;
+                    m = m.next;
+                }
+            }
+            p = p.next;
+        }
+        */
+
+        // ensure nothing has a moon bigger than itself.
+        boolean done = false;
+        while(!done) {
+            // iterate over each planet, check its moons, if anything changes then start over.
+            Planet p = this.planetHead;
+            while(p != null) {
+                if(p.moonHead != null) {
+                    Planet m = p.moonHead;
+                    if(m.next == null) {
+                        if(m.mass > p.mass) {
+                            // moon is bigger than the planet it orbits.
+                            this.planetHead = swapMoonWithPlanet(this.planetHead, p, m);
+                            m.moonHead = p;
+                            p.next = null;
+                            p.isMoon = true;
+                            m.isMoon = false;
+                            break;
+                        }
+                    } else {
+                        // multiple moons makes this a bit more delicate.
+                        Planet largest = p;
+                        while(m != null) {
+                            if(largest.mass < m.mass) {
+                                largest = m;
+
+                            }
+                            m = m.next;
+                        }
+
+                        if(largest != p) {
+                            Planet newMoonHead = removePlanet(p.moonHead, largest);
+                            this.planetHead = swapMoonWithPlanet(this.planetHead, p, largest);
+                            p.next = null;
+                            largest.moonHead = newMoonHead;
+                            largest.moonHead.append(p);
+                            p.isMoon = true;
+                            largest.isMoon = false;
+                            break;
+                        }
+                    }
+                }
+                p = p.next;
+            }
+            if(p == null) {
+                // we've reached the end
+                done = true;
+            }
+        }
+
+        // For any failed planets or escaped moons, alter their eccentricity and see what orbits they intersect.
+    }
+
     private void migratePlanets() {
 
     }
@@ -506,7 +576,7 @@ public class System {
     private void setEnvironments() {
         Planet p = planetHead;
         while(p != null) {
-            p.finalize(this.centralBody, doMoons);
+            p.finalize(doMoons);
             p = p.next;
         }
 
@@ -530,19 +600,127 @@ public class System {
     }
 
     public int numberOfFailedPlanets() {
-        return Utils.instance().countPlanets(failedPlanets);
+        return countPlanets(failedPlanets);
     }
 
     public int numberOfEscapedMoons() {
-        return Utils.instance().countPlanets(escapedMoons);
+        return countPlanets(escapedMoons);
     }
 
     public double massOfFailedPlanets() {
-        return Utils.instance().sumMassOfPlanets(failedPlanets);
+        return sumMassOfPlanets(failedPlanets);
     }
 
     public double massOfEscapedMoons() {
-        return Utils.instance().sumMassOfPlanets(escapedMoons);
+        return sumMassOfPlanets(escapedMoons);
+    }
+
+    public int numberOfMoons() {
+        Planet p = this.planetHead;
+        int moons = 0;
+        while(p != null) {
+            moons += countPlanets(p.moonHead);
+            p = p.next;
+        }
+        return moons;
+    }
+
+    public Planet insertPlanetAt(Planet list, Planet p, double AU) {
+        return list; // TODO: Make this work properly.
+    }
+
+    /**
+     * This function does no housekeeping on the planet being removed, it simply removes it from
+     * the given list, if it is in the given list, and returns the list.
+     *
+     * @param list
+     * @param p
+     * @return
+     */
+    public Planet removePlanet(Planet list, Planet p) {
+        if(list == p) {
+            if(list.next == null) {
+                return list;
+            } else {
+                list = p.next;
+                p.next = null;
+                return list;
+            }
+        }
+
+        // find it.
+        Planet n = list;
+        while(n != null) {
+            if(n.next == p) {
+                n.next = p.next;
+                p.next = null;
+                return list;
+            }
+            n = n.next;
+        }
+
+        // fall through if nothing changed.
+        return list;
+    }
+
+    /**
+     * This function assumes the moon has already been removed from the planet's moon list or has
+     * nothing to do with the planet, and that the moon has no ancestors or descendants.
+     *
+     * @param list
+     * @param p
+     * @param m
+     * @return
+     */
+    public Planet swapMoonWithPlanet(Planet list, Planet p, Planet m) {
+        if(list == p) {
+            if(list.next == null) {
+                return m; // the moon is the new list.
+            } else {
+                m.next = list.next;
+                return m;
+            }
+        }
+
+        // find the planet
+        Planet n = list;
+        while(n != null) {
+            if(n.next == p) {
+                n.next = m;
+                m.next = p.next;
+                return list;
+            }
+            n = n.next;
+        }
+
+        // fall through if nothing changed.
+        return list;
+    }
+
+    public static int countPlanets(Planet p) {
+        if(p == null) {
+            return 0;
+        }
+        Planet current = p.next;
+        int x = 1;
+        while(current != null) {
+            x++;
+            current = current.next;
+        }
+        return x;
+    }
+
+    public static double sumMassOfPlanets(Planet p) {
+        if(p == null) {
+            return 0.0;
+        }
+        Planet current = p.next;
+        double x = p.dustMass + p.gasMass;
+        while(current != null) {
+            x += current.dustMass + current.gasMass;
+            current = current.next;
+        }
+        return x;
     }
 
     public String toString() {
@@ -551,6 +729,7 @@ public class System {
         str = str.concat("Primary: " + centralBody.toString() + cr);
         str = str.concat("Failed planets: " + numberOfFailedPlanets() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfFailedPlanets())) + "EM)" + cr);
         str = str.concat("Escaped Moons: " + numberOfEscapedMoons() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfEscapedMoons())) + "EM)" + cr);
+        str = str.concat("Captured Moons: " + numberOfMoons() + cr);
         str = str.concat(cr);
         Planet temp = planetHead;
         int i = 1;

@@ -142,12 +142,30 @@ public abstract class SystemObject {
         return periapsis(this.sma, this.eccentricity);
     }
 
+    /**
+     * @return The orbital apoapsis
+     */
+    public double asMoonApoapsis() {
+        return apoapsis(this.asMoonSMA, this.asMoonEccentricty);
+    }
+
+    /**
+     * @return The orbital periapsis
+     */
+    public double asMoonPeriapsis() {
+        return periapsis(this.asMoonSMA, this.asMoonEccentricty);
+    }
+
     public static double smaInMeters(double sma) {
         return sma * EARTH_SMA;
     }
 
     public double smaInMeters() {
         return smaInMeters(this.sma);
+    }
+
+    public static double AUtoKm(double au) {
+        return au * KM_PER_AU;
     }
 
     /**

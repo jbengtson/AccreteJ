@@ -64,32 +64,6 @@ class Utils {
         return value + (value * randomNumber(-variation, variation));
     }
 
-    public int countPlanets(Planet p) {
-        if(p == null) {
-            return 0;
-        }
-        Planet current = p.next;
-        int x = 1;
-        while(current != null) {
-            x++;
-            current = current.next;
-        }
-        return x;
-    }
-
-    public double sumMassOfPlanets(Planet p) {
-        if(p == null) {
-            return 0.0;
-        }
-        Planet current = p.next;
-        double x = p.dustMass + p.gasMass;
-        while(current != null) {
-            x += current.dustMass + current.gasMass;
-            current = current.next;
-        }
-        return x;
-    }
-
     public Star randomStar() {
         double roll = random.nextDouble();
         if(roll <= 0.907) { // Main sequence stars
