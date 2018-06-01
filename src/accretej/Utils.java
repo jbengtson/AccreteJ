@@ -2,14 +2,14 @@ package accretej;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Random;
-import java.util.Vector;
 import java.lang.System;
 
 class Utils {
     private static Utils instance;
     private static Random random;
-    private static Vector<Star>
+    private static ArrayList<Star>
         MStars,
         KStars,
         GStars,
@@ -137,8 +137,8 @@ class Utils {
         Giant = loadStarType("data/Giants.csv");
     }
 
-    private static Vector<Star> loadStarType(String filename) {
-        Vector<Star> stars = new Vector<>();
+    private static ArrayList<Star> loadStarType(String filename) {
+        ArrayList<Star> stars = new ArrayList<>();
         Star s;
         String line;
         String[] split;

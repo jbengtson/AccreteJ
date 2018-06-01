@@ -1,7 +1,8 @@
 package accretej;
 
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Vector;
+import java.util.ListIterator;
 
 public class Planet extends SystemObject {
     protected double
@@ -45,11 +46,9 @@ public class Planet extends SystemObject {
         earthlike = false,
         habitableMoon = false;
     protected planetType type;
-    protected Planet
-        next = null,
-        moonHead = null;
     protected Star primary;
-    protected Vector<AtmosphericChemical> atmosphere = new Vector<AtmosphericChemical>();
+    protected ArrayList<Planet> moons = new ArrayList<>();
+    protected ArrayList<AtmosphericChemical> atmosphere = new ArrayList<>();
 
     protected enum atmosphereType {
         NONE,
@@ -225,29 +224,26 @@ public class Planet extends SystemObject {
         }
 
         if(doMoons && !this.isMoon) {
-            if(this.moonHead != null) {
-                Planet p = this.moonHead;
+            ListIterator<Planet> i = this.moons.listIterator();
+            while(i.hasNext()) {
+                Planet p = i.next();
+                if(p.massInEarthMasses() > 0.000001) {
+                    p.sma = this.sma;
+                    p.eccentricity = this.eccentricity;
+                    p.finalize(false);
 
-                while(p != null) {
-                    if(p.massInEarthMasses() > 0.000001) {
-                        p.sma = this.sma;
-                        p.eccentricity = this.eccentricity;
-                        p.finalize(false);
+                    double rocheLimit = 2.44 * this.radius * Math.pow(this.density / p.density, 1.0 / 3.0);
+                    double hillSphere = this.sma * KM_PER_AU * Math.pow(this.mass / (3.0 * this.primary.mass), 1.0 / 3.0);
 
-                        double rocheLimit = 2.44 * this.radius * Math.pow(this.density / p.density, 1.0 / 3.0);
-                        double hillSphere = this.sma * KM_PER_AU * Math.pow(this.mass / (3.0 * this.primary.mass), 1.0 / 3.0);
-
-                        if(rocheLimit * 3.0 < hillSphere) {
-                            p.asMoonSMA = Utils.instance().randomNumber(rocheLimit * 1.5, hillSphere / 2.0) / KM_PER_AU;
-                            p.asMoonEccentricty = Utils.instance().randomEccentricity();
-                        }
-                        if(p.habitable) {
-                            this.habitableMoon = true;
-                        }
-                    } else {
-                        // TODO: here we have a moon that isn't a moon?
+                    if(rocheLimit * 3.0 < hillSphere) {
+                        p.asMoonSMA = Utils.instance().randomNumber(rocheLimit * 1.5, hillSphere / 2.0) / KM_PER_AU;
+                        p.asMoonEccentricty = Utils.instance().randomEccentricity();
                     }
-                    p = p.next;
+                    if(p.habitable) {
+                        this.habitableMoon = true;
+                    }
+                } else {
+                    // TODO: here we have a moon that isn't a moon?
                 }
             }
         }
@@ -350,15 +346,7 @@ public class Planet extends SystemObject {
     }
 
     public int numberOfMoons() {
-        return System.countPlanets(this.moonHead);
-    }
-
-    public void append(Planet p) {
-        if(next == null) {
-            next = p;
-        } else {
-            next.append(p);
-        }
+        return this.moons.size();
     }
 
     /**
@@ -1220,12 +1208,9 @@ public class Planet extends SystemObject {
 
     public String toString() {
         String retval = datasheet();
-        if(this.moonHead != null) {
-            Planet p = this.moonHead;
-            while(p != null) {
-                retval += p.datasheet("    ");
-                p = p.next;
-            }
+        ListIterator<Planet> i = this.moons.listIterator();
+        while(i.hasNext()) {
+            retval += i.next().datasheet("    ");
         }
         return retval;
     }
