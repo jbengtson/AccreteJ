@@ -33,10 +33,8 @@ class Utils {
         PPM_PRESSURE = EARTH_SURF_PRES_IN_MILLIBARS / 1000000.0;
 
     private Utils() {
-        // we want to initialize the random instance.
         seed = java.lang.System.currentTimeMillis();
         random = new Random(seed);
-        // random = new Random(1003); // This seed with a G-type star will produce a habitable planet, good for baseline testing.
         loadChemicals();
         loadStars();
     }
@@ -167,7 +165,7 @@ class Utils {
     }
 
     private static void loadChemicals() {
-        Chemtable = new Chemical[13];
+        Chemtable = new Chemical[15];
         Chemtable[0] = new Chemical(1,"H", "Hydrogen", 1.0079, 14.06, 20.40, 8.99e-05, 0.00125893, 27925.4, 1, 0.0);
         Chemtable[1] = new Chemical(2, "He", "Helium", 4.0026, 3.46, 4.20, 0.0001787, 7.94328e-09, 2722.7, 0, 61000.0 * MMHG_TO_MILLIBARS);
         Chemtable[2] = new Chemical(7, "N", "Nitrogen", 14.0067, 63.34, 77.40, 0.0012506, 1.99526e-05, 3.13329, 0, 2330.0 * MMHG_TO_MILLIBARS);
@@ -181,15 +179,12 @@ class Utils {
         Chemtable[10] = new Chemical(902, "CO2", "CarbonDioxide", 44.0000, 194.66, 194.66, 0.001, 0.01, 0.0005, 0, 7.0 * MMHG_TO_MILLIBARS);
         Chemtable[11] = new Chemical(903, "O3", "Ozone", 48.0000, 80.16, 161.16, 0.001, 0.001, 0.000001, 2, 0.1 * PPM_PRESSURE);
         Chemtable[12] = new Chemical(904, "CH4", "Methane", 16.0000, 90.16, 109.16, 0.010, 0.005, 0.0001, 1, 50000.0 * PPM_PRESSURE);
-
-/* TODO: Format this correctly in case they can be added later? Some good stuff here.
-        Chemtable[12] = new Chemical(9, "F", "Fluorine", 18.9984,  53.58,  85.10,  0.001696, 0.000630957, 0.000843335, 50, 0.1 * PPM_PRSSURE
-        Chemtable[12] = new Chemical(17, "Cl", "Chlorine", 35.4530, 172.22, 239.20,  0.003214, 0.000125893, 0.005236, 40, 1.0 * PPM_PRSSURE
-        Chemtable[12] = new Chemical(910, "H2", "H2", 2, 14.06, 20.40, 8.99e-05,  0.00125893, 27925.4
-        Chemtable[12] = new Chemical(911, "N2", "N2", 28, 63.34, 77.40, 0.0012506, 1.99526e-05,3.13329
-        Chemtable[12] = new Chemical(912, "O2", "O2", 32, 54.80, 90.20, 0.001429,  0.501187, 23.8232, 10
-        Chemtable[12] = new Chemical(905, "CH3CH2OH", "Ethanol", 46.0000, 159.06, 351.66, 0.895, 0.001, 0.001, 0
-*/
-
+// TODO: Format this correctly in case they can be added later? Some good stuff here.
+        Chemtable[13] = new Chemical(9, "F", "Fluorine", 18.9984,  53.58,  85.10,  0.001696, 0.000630957, 0.000843335, 50, 0.1 * PPM_PRESSURE);
+        Chemtable[14] = new Chemical(17, "Cl", "Chlorine", 35.4530, 172.22, 239.20,  0.003214, 0.000125893, 0.005236, 40, 1.0 * PPM_PRESSURE);
+//        Chemtable[12] = new Chemical(910, "H2", "H2", 2, 14.06, 20.40, 8.99e-05,  0.00125893, 27925.4
+//        Chemtable[12] = new Chemical(911, "N2", "N2", 28, 63.34, 77.40, 0.0012506, 1.99526e-05,3.13329
+//        Chemtable[12] = new Chemical(912, "O2", "O2", 32, 54.80, 90.20, 0.001429,  0.501187, 23.8232, 10, 0.0);
+//        Chemtable[12] = new Chemical(905, "CH3CH2OH", "Ethanol", 46.0000, 159.06, 351.66, 0.895, 0.001, 0.001, 0
     }
 }

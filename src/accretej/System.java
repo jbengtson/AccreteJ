@@ -81,7 +81,7 @@ public class System {
                 dustMass.value += PROTOPLANET_MASS;
 
                 if(mass > PROTOPLANET_MASS) {
-                    coalescePlanetesimals(sma, ecc, mass, criticalMass, dustMass.value, gasMass.value, innerBound, outerBound);
+                    coalescePlanetesimals(sma, ecc, mass, criticalMass, dustMass.value, gasMass.value, innerBound, outerBound, false);
                 } else {
                     // save the failed planetesimal
                     Planet p = new Planet(this.centralBody);
@@ -312,7 +312,7 @@ public class System {
         }
     }
 
-    public void coalescePlanetesimals(double sma, double ecc, double mass, double criticalMass, double dustMass, double gasMass, double innerBound, double outerBound) {
+    public void coalescePlanetesimals(double sma, double ecc, double mass, double criticalMass, double dustMass, double gasMass, double innerBound, double outerBound, boolean lateGen) {
         Planet thePlanet = null, nextPlanet = null, prevPlanet = null;
         boolean finished = false;
         double temp, diff, dist1, dist2;
@@ -435,8 +435,10 @@ public class System {
                             String.format("%1$,.2f", SystemObject.massInEarthMasses(criticalMass)) + "EM])-> " + String.format("%1$,.2f", newSMA) + " AU (" + String.format("%1$,.2f", ecc) + ")");
                     }
                     temp = thePlanet.mass + mass;
-                    temp = accreteDust(temp, newDust, newGas, newSMA, ecc, centralBody.luminosity, innerBound, outerBound);
-
+                    if(!lateGen) {
+                        // during late gen when we're trying to recapture moons and failed planetoids we don't have dust.
+                        temp = accreteDust(temp, newDust, newGas, newSMA, ecc, centralBody.luminosity, innerBound, outerBound);
+                    }
                     thePlanet.sma = newSMA;
                     thePlanet.eccentricity = ecc;
                     thePlanet.mass = temp;
@@ -501,27 +503,35 @@ public class System {
     }
 
     private void checkMasses() {
-        // ensure the planetary mass is equal to dust mass plus gas mass
-        /* TODO: This completely screws up the planetary generation process, but why?
-        Planet p = this.planetHead;
+        Planet p;
+
+        // For any escaped moons, alter their eccentricity.
+        p = this.escapedMoons;
         while(p != null) {
-            p.mass = p.dustMass + p.gasMass;
-            if(p.moonHead != null) {
-                Planet m = p.moonHead;
-                while(m != null) {
-                    m.mass = m.dustMass + m.gasMass;
-                    m = m.next;
-                }
-            }
+            p.eccentricity += Math.pow(Utils.instance().randomNumber(0.1, 0.9) * p.sma, Utils.ECCENTRICITY_COEFF); // Should be pretty wide.
             p = p.next;
         }
-        */
+
+        // Now decide how to handle each failure or escapee.
+        p = this.failedPlanets;
+        this.failedPlanets = null;
+        while(p != null) {
+            coalescePlanetesimals(p.sma, p.eccentricity, p.mass, criticalMass(p.sma, p.eccentricity), p.dustMass, p.gasMass, p.periapsis(), p.apoapsis(), true);
+            p = p.next;
+        }
+
+        p = this.escapedMoons;
+        this.escapedMoons = null;
+        while(p != null) {
+            coalescePlanetesimals(p.sma, p.eccentricity, p.mass, criticalMass(p.sma, p.eccentricity), p.dustMass, p.gasMass, p.periapsis(), p.apoapsis(), true);
+            p = p.next;
+        }
 
         // ensure nothing has a moon bigger than itself.
         boolean done = false;
         while(!done) {
             // iterate over each planet, check its moons, if anything changes then start over.
-            Planet p = this.planetHead;
+            p = this.planetHead;
             while(p != null) {
                 if(p.moonHead != null) {
                     Planet m = p.moonHead;
@@ -565,8 +575,6 @@ public class System {
                 done = true;
             }
         }
-
-        // For any failed planets or escaped moons, alter their eccentricity and see what orbits they intersect.
     }
 
     private void migratePlanets() {

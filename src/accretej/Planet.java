@@ -143,11 +143,6 @@ public class Planet extends SystemObject {
                     this.surfaceAcceleration = gravitationalAcceleration();
                     this.surfaceGravity = gravity();
                 }
-
-                /* TODO: Logging singleton
-                if (((h2Loss + heLoss) > .000001) && (flag_verbose & 0x0080))
-                    fprintf (stderr, "%s\tLosing gas: H2: %5.3Lf EM, He: %5.3Lf EM\n", planet_id, h2Loss * SUN_MASS_IN_EARTH_MASSES, heLoss * SUN_MASS_IN_EARTH_MASSES);
-                */
             }
         }
 
@@ -173,23 +168,6 @@ public class Planet extends SystemObject {
 
             if(this.estimatedTerrestrialTemperature >= FREEZING_POINT_OF_WATER && this.estimatedTerrestrialTemperature <= EARTH_AVERAGE_KELVIN + 10.0 && this.primary.age > 2.0E9) {
                 this.habitableJovian = true;
-
-                /* TODO: Logging singleton
-                if(flag_verbose & 0x8000) {
-                    fprintf (stderr, "%s\t%s (%4.2LfEM %5.3Lf By)%s with earth-like temperature (%.1Lf C, %.1Lf F, %+.1Lf C Earth).\n",
-                        planet_id,
-                        planet->type == tGasGiant ? "Jovian" :
-                            planet->type == tSubGasGiant ? "Sub-Jovian" :
-                                planet->type == tSubSubGasGiant ? "Gas Dwarf" :
-                                    "Big",
-                        planet->mass * SUN_MASS_IN_EARTH_MASSES,
-                        primary.age /1.0E9,
-                        planet->first_moon == NULL ? "" : " WITH MOON",
-                        temp - FREEZING_POINT_OF_WATER,
-                        32 + ((temp - FREEZING_POINT_OF_WATER) * 1.8),
-                        temp - EARTH_AVERAGE_KELVIN);
-                }
-                */
             }
         } else {
             this.estimatedTemperature = estimatedTemperature();
@@ -200,7 +178,7 @@ public class Planet extends SystemObject {
             this.volatileGasInventory= volatileGasInventory();
             this.surfacePressure = pressure();
 
-            if(this.surfacePressure <= 0.000001) { // TODO: May have to come back to this, was originally 0.0
+            if(this.surfacePressure <= 0.0) { // TODO: May have to come back to this, was originally 0.0
                 this.boilingPoint = 0.0;
             } else {
                 this.boilingPoint = boilingPoint();
@@ -242,19 +220,6 @@ public class Planet extends SystemObject {
                     this.type = planetType.tIce;
                 } else {
                     this.type = planetType.tUnknown;
-                    /* TODO: Logging singleton
-                    if (flag_verbose & 0x0001)
-                        fprintf (stderr, "%12s\tp=%4.2Lf\tm=%4.2Lf\tg=%4.2Lf\tt=%+.1Lf\t%s\t Unknown %s\n",
-                            type_string (this.type),
-                            this.surf_pressure,
-                            this.mass * SUN_MASS_IN_EARTH_MASSES,
-                            this.surf_grav,
-                            this.surf_temp  - EARTH_AVERAGE_KELVIN,
-                            planet_id,
-                            ((int)this.day == (int)(this.orb_period * 24.0) ||
-                                (this.resonant_period)) ? "(1-Face)" : ""
-                        );
-                    */
                 }
             }
         }
@@ -276,33 +241,11 @@ public class Planet extends SystemObject {
                             p.asMoonSMA = Utils.instance().randomNumber(rocheLimit * 1.5, hillSphere / 2.0) / KM_PER_AU;
                             p.asMoonEccentricty = Utils.instance().randomEccentricity();
                         }
-
-                        /* TODO: logging singleton
-                        if(flag_verbose & 0x40000) {
-                            fprintf (stderr,
-                                "   Roche limit: R = %4.2Lg, rM = %4.2Lg, rm = %4.2Lg -> %.0Lf km\n"
-                                "   Hill Sphere: a = %4.2Lg, m = %4.2Lg, M = %4.2Lg -> %.0Lf km\n"
-                                "%s Moon orbit: a = %.0Lf km, e = %.0Lg\n",
-                                this.radius, this.density, ptr->density,
-                                roche_limit,
-                                this.a * KM_PER_AU, this.mass * SOLAR_MASS_IN_KILOGRAMS, sun->mass * SOLAR_MASS_IN_KILOGRAMS,
-                                hill_sphere,
-                                moon_id,
-                                ptr->moon_a * KM_PER_AU, ptr->moon_e
-                            );
-                        }
-
-                        if(flag_verbose & 0x1000) {
-                            fprintf (stderr, "  %s: (%7.2LfEM) %d %4.2LgEM\n",
-                                planet_id,
-                                this.mass * SUN_MASS_IN_EARTH_MASSES,
-                                n,
-                                ptr->mass * SUN_MASS_IN_EARTH_MASSES);
-                        }
-                        */
                         if(p.habitable) {
                             this.habitableMoon = true;
                         }
+                    } else {
+                        // TODO: here we have a moon that isn't a moon?
                     }
                     p = p.next;
                 }
@@ -372,30 +315,8 @@ public class Planet extends SystemObject {
 
                     fract = 1.0 - (this.minimumMolecularWeight / chems[i].weight);
                     amount[i] = abund * pvrms * react * fract;
+//                    java.lang.System.out.println("Found chemical " + chems[i].symbol + " with a yp = " + yp + " a low temp of " + this.lowTemperature + "  and a min molar mass of " + this.minimumMolecularWeight + " with amount " + amount[i]);
 
-/* TODO: Logging */
-//                    Logger.instance().log(Logger.level.systemOut, String.format("%1$,.2f", massInEarthMasses()) + "em, found: " + chems[i].symbol + " - " + String.format("%1$,.4f", amount[i]));
-/*
-                    if ((flag_verbose & 0x4000) &&
-                        (strcmp(gases[i].symbol, "O") == 0 ||
-                            strcmp(gases[i].symbol, "N") == 0 ||
-                            strcmp(gases[i].symbol, "Ar") == 0 ||
-                            strcmp(gases[i].symbol, "He") == 0 ||
-                            strcmp(gases[i].symbol, "CO2") == 0))
-                    {
-                        fprintf (stderr, "%-5.2Lf %-3.3s, %-5.2Lf = a %-5.2Lf * p %-5.2Lf * r %-5.2Lf * p2 %-5.2Lf * f %-5.2Lf\t(%.3Lf%%)\n",
-                            this.mass * SUN_MASS_IN_EARTH_MASSES,
-                            gases[i].symbol,
-                            amount[i],
-                            abund,
-                            pvrms,
-                            react,
-                            pres2,
-                            fract,
-                            100.0 * (this.gas_mass / this.mass)
-                        );
-                    }
-*/
                     totalAmount += amount[i];
                 } else {
                     amount[i] = 0.0;
@@ -407,42 +328,11 @@ public class Planet extends SystemObject {
                     if(amount[i] > 0.0) {
                         this.atmosphere.add(new AtmosphericChemical(chems[i], this.surfacePressure * amount[i] / totalAmount));
                         // Logger.instance().log(Logger.level.systemOut, String.format("%1$,.2f", massInEarthMasses()) + "em, added: " + chems[i].symbol + " - " + String.format("%1$,.4f", amount[i]) + " " + String.format("%1$,.4f", amount[i] / totalAmount) + "%");
-/* TODO: logging
-                        if (flag_verbose & 0x2000) {
-                            if ((this.atmosphere[n].num == AN_O) &&
-                                inspired_partial_pressure (this.surfacePressure,
-                                    this.atmosphere[n].surfacePressure)
-                                    > gases[i].max_ipp)
-                            {
-                                fprintf (stderr, "%s\t Poisoned by O2\n",
-                                    planet_id);
-                            }
-                        }
-*/
                     }
                 }
 
-                // TODO: Do some sorting on the resulting vector
+                // TODO: Do some sorting on the resulting vector ?
                 // qsort(this.atmosphere, this.gases, sizeof(gas), diminishing_pressure);
-
-/* TODO: Logging
-                if (flag_verbose & 0x0010)
-                {
-                    fprintf (stderr, "\n%s (%5.1Lf AU) gases:\n",
-                        planet_id, this.a);
-
-                    for (i = 0; i < this.gases; i++)
-                    {
-                        fprintf (stderr, "%3d: %6.1Lf, %11.7Lf%%\n",
-                            this.atmosphere[i].num,
-                            this.atmosphere[i].surfacePressure,
-                            100. * (this.atmosphere[i].surfacePressure /
-                                this.surfacePressure)
-                        );
-                    }
-                }
-*/
-
             }
         }
     }
@@ -1041,8 +931,6 @@ public class Planet extends SystemObject {
 
     public void calculateSurfaceTemperature(boolean first, double lastWater, double lastClouds, double lastIce, double lastTemperature, double lastAlbedo) {
         double effectiveTemperature;
-        double waterRaw; // this is used for logging purposes.
-        double cloudsRaw; // this is used for logging purposes.
         double greenhouseTemperature;
         boolean boilOff = false;
 
@@ -1055,22 +943,14 @@ public class Planet extends SystemObject {
         }
 
         if(this.greenhouseEffect && this.maxTemperature < this.boilingPoint) {
-            /* TODO: Logger singleton bruh
-            if (flag_verbose & 0x0010)
-                fprintf (stderr, "Deluge: %s %d max (%Lf) < boil (%Lf)\n",
-                    planet->sun->name,
-                    planet->planet_no,
-                    planet->max_temp,
-                    planet->boil_point);
-            */
             this.greenhouseEffect = false;
             this.volatileGasInventory = volatileGasInventory();
             this.surfacePressure = pressure();
             this.boilingPoint = boilingPoint();
         }
 
-        waterRaw = this.hydrosphere = waterCoverage();
-        cloudsRaw = this.cloudCover = cloudFraction();
+        this.hydrosphere = waterCoverage();
+        this.cloudCover = cloudFraction();
         this.iceCover = iceFraction();
 
         if(this.greenhouseEffect && this.surfacePressure > 0.0) {
@@ -1108,43 +988,10 @@ public class Planet extends SystemObject {
         }
 
         setTemperatureRange();
-
-        /* TODO: Logger singleton
-        if (flag_verbose & 0x0020)
-            fprintf (stderr, "%5.1Lf AU: %5.1Lf = %5.1Lf ef + %5.1Lf gh%c "
-                "(W: %4.2Lf (%4.2Lf) C: %4.2Lf (%4.2Lf) I: %4.2Lf A: (%4.2Lf))\n",
-                planet->a,
-                planet->surf_temp - FREEZING_POINT_OF_WATER,
-                effective_temp - FREEZING_POINT_OF_WATER,
-                greenhouse_temp,
-                (planet->greenhouse_effect) ? '*' :' ',
-                planet->hydrosphere, water_raw,
-                planet->cloud_cover, clouds_raw,
-                planet->ice_cover,
-                planet->albedo);
-        */
     }
 
     public void iterateSurfaceTemperature() {
         double initialTemperature = estimatedTemperature();
-
-        /* TODO: This stuff might be better added to a logger singleton.
-        double h2Life = gasLife(MOLECULAR_HYDROGEN);
-        double h2oLife = gasLife(WATER_VAPOR);
-        double n2Life = gasLife(MOLECULAR_NITROGEN);
-        double nLife = gasLife(ATOMIC_NITROGEN);
-
-        if(flag_verbose & 0x20000)
-            fprintf (stderr, "%d:                     %5.1Lf it [%5.1Lf re %5.1Lf a %5.1Lf alb]\n",
-                planet->planet_no,
-                initial_temp,
-                planet->sun->r_ecosphere, planet->a, planet->albedo
-            );
-
-        if (flag_verbose & 0x0040)
-            fprintf (stderr, "\nGas lifetimes: H2 - %Lf, H2O - %Lf, N - %Lf, N2 - %Lf\n",
-                h2_life, h2o_life, n_life, n2_life);
-        */
 
         calculateSurfaceTemperature(true, 0.0, 0.0, 0.0, 0.0, 0.0);
 
@@ -1163,18 +1010,6 @@ public class Planet extends SystemObject {
         }
 
         this.greenhouseRise = this.surfaceTemperature - initialTemperature;
-
-        /* TODO: This stuff might be better added to a logger singleton.
-        if (flag_verbose & 0x20000)
-            fprintf (stderr, "%d: %5.1Lf gh = %5.1Lf (%5.1Lf C) st - %5.1Lf it [%5.1Lf re %5.1Lf a %5.1Lf alb]\n",
-                planet->planet_no,
-                planet->greenhs_rise,
-                planet->surf_temp,
-                planet->surf_temp - FREEZING_POINT_OF_WATER,
-                initial_temp,
-                planet->sun->r_ecosphere, planet->a, planet->albedo
-            );
-        */
     }
 
     /**
@@ -1364,10 +1199,11 @@ public class Planet extends SystemObject {
             retval += cr + prepend + "  Surface: Gravity - " + String.format("%1$,.2f", this.surfaceGravity) + ", Temperature - " + String.format("%1$,.2f", this.surfaceTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.surfaceTemperature * (9.0 / 5.0) - 459.67) + "F)";
             retval += cr + prepend + "  Water: " + String.format("%1$,.2f", this.hydrosphere * 100.0) + "%, Cloud Cover: " + String.format("%1$,.2f", this.cloudCover * 100.0) + "%, Ice Cover: " + String.format("%1$,.2f", this.iceCover * 100.0) + "%";
             retval += cr + prepend + "  Min Temperature - " + String.format("%1$,.2f", this.minTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.minTemperature * (9.0 / 5.0) - 459.67) + "F), Low Temperature - " + String.format("%1$,.2f", this.lowTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.lowTemperature * (9.0 / 5.0) - 459.67) + "F), High Temperature - " + String.format("%1$,.2f", this.highTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.highTemperature * (9.0 / 5.0) - 459.67) + "F), Max Temperature - " + String.format("%1$,.2f", this.maxTemperature - 273.15) + "C (" + String.format("%1$,.2f", this.maxTemperature * (9.0 / 5.0) - 459.67) + "F)";
+            double yp = (373.0 * ((Math.log(this.surfacePressure / 1000.0 + 0.001) / -5050.5) + (1.0 / 373.0)));
+            retval += cr + prepend + "  Atmosphere: Pressure - " + String.format("%1$,.2f", this.surfacePressure / 1000.0) + " bar, Minimum Molecular Weight - " + String.format("%1$,.3f", this.minimumMolecularWeight) + ", yp - " + String.format("%1$,.3f", yp);
         }
         if(this.atmosphere != null) {
             if(this.atmosphere.size() > 0) {
-                retval += cr + prepend + "  Atmosphere: Pressure - " + String.format("%1$,.2f", this.surfacePressure / 1000.0) + " bar";
                 retval += cr + prepend + "  Atmospheric Constituents:";
                 AtmosphericChemical ac;
                 Iterator<AtmosphericChemical> i = atmosphere.iterator();
@@ -1392,21 +1228,5 @@ public class Planet extends SystemObject {
             }
         }
         return retval;
-        /*
-        String retval = "";
-        if(this.gasGiant) {
-            retval = planetType() + " " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInJupiterMasses()) + " jm, " + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
-        } else {
-            if(this.habitable) {
-                if(this.earthlike) {
-                    retval = planetType() + " (earthlike " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
-                } else {
-                    retval = planetType() + " (habitable " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
-                }
-            } else {
-                retval = planetType() + " (" + atmosphereType() + " " + String.format("%1$,.2f", this.pressure()) + ") " + String.format("%1$,.2f", this.sma) + "AU (" + String.format("%1$,.2f", massInEarthMasses()) + " em) " + numberOfMoons() + " moons" + (this.habitableMoon ? " (habitable)" : "");
-            }
-        }
-        */
     }
 }
