@@ -10,11 +10,15 @@ public class AccreteJ {
         */
 
         System s;
+        int count = 0;
         while(!habitable) {
             s = new System(true, false, false);
             if(s.habitable) {
                 habitable = true;
+                java.lang.System.out.println("Discarded " + count + " systems finding this one.");
                 java.lang.System.out.println(s);
+            } else {
+                count++;
             }
         }
     }

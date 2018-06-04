@@ -1,7 +1,7 @@
 package accretej;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 import java.util.ListIterator;
 
 public class System {
@@ -9,7 +9,6 @@ public class System {
     ArrayList<Planet> planets = new ArrayList<>(),
                       failedPlanets = new ArrayList<>(),
                       escapedMoons = new ArrayList<>();
-
     static final double
         B = 1.2E-5, // used in critical mass calculations
         PROTOPLANET_MASS	= 1.0E-15, // TODO: This is in stellar masses, check the validity of this. Vesta is 1.3028E-10 by comparison.
@@ -42,7 +41,7 @@ public class System {
         centralBody = Utils.instance().randomKStar();
         centralBody.setAge();
         distributePlanetaryMasses();
-        checkMasses();
+        checkPlanets();
         migratePlanets();
         setEnvironments();
     }
@@ -82,7 +81,7 @@ public class System {
                 dustMass.value += PROTOPLANET_MASS;
 
                 if(mass > PROTOPLANET_MASS) {
-                    coalescePlanetesimals(sma, ecc, mass, criticalMass, dustMass.value, gasMass.value, innerBound, outerBound, false);
+                    coalescePlanetesimals(sma, ecc, mass, criticalMass, dustMass.value, gasMass.value, innerBound, outerBound);
                 } else {
                     // save the failed planetesimal
                     Planet p = new Planet(this.centralBody);
@@ -310,8 +309,8 @@ public class System {
         }
     }
 
-    public void coalescePlanetesimals(double sma, double ecc, double mass, double criticalMass, double dustMass, double gasMass, double innerBound, double outerBound, boolean lateGen) {
-        Planet thePlanet, nextPlanet = null, prevPlanet = null;
+    public void coalescePlanetesimals(double sma, double ecc, double mass, double criticalMass, double dustMass, double gasMass, double innerBound, double outerBound) {
+        Planet thePlanet;
         boolean finished = false;
         double temp, diff, dist1, dist2;
 
@@ -424,10 +423,7 @@ public class System {
                             String.format("%1$,.2f", SystemObject.massInEarthMasses(criticalMass)) + "EM])-> " + String.format("%1$,.2f", newSMA) + " AU (" + String.format("%1$,.2f", ecc) + ")");
                     }
                     temp = thePlanet.mass + mass;
-                    if(!lateGen) {
-                        // during late gen when we're trying to recapture moons and failed planetoids we don't have dust.
-                        temp = accreteDust(temp, newDust, newGas, newSMA, ecc, centralBody.luminosity, innerBound, outerBound);
-                    }
+                    temp = accreteDust(temp, newDust, newGas, newSMA, ecc, centralBody.luminosity, innerBound, outerBound);
                     thePlanet.sma = newSMA;
                     thePlanet.eccentricity = ecc;
                     thePlanet.mass = temp;
@@ -436,13 +432,142 @@ public class System {
                     if(thePlanet.mass >= criticalMass) {
                         thePlanet.gasGiant = true;
                     }
-                    planets.add(thePlanet);
+                    // planets.add(thePlanet); // the planet already exists, don't duplicate it
                 }
 
                 finished = true;
                 break;
+            }
+        }
+
+        if(!finished) { // Planetesimals didn't collide. Make it a planet.
+            thePlanet = new Planet(this.centralBody);
+
+            thePlanet.sma = sma;
+            thePlanet.eccentricity = ecc;
+            thePlanet.mass = mass;
+            thePlanet.dustMass = dustMass;
+            thePlanet.gasMass = gasMass;
+            if(mass >= criticalMass) {
+                thePlanet.gasGiant = true;
+            }
+            planets.add(thePlanet);
+        }
+
+        // adding a new planet requires sorting the list.
+        sortPlanetsBySMA(planets);
+    }
+
+    /**
+     * This is basically a late-generation coalescePlanetesimals designed to reintegrate masses that initially failed.
+     * @param sma
+     * @param ecc
+     * @param mass
+     * @param criticalMass
+     * @param dustMass
+     * @param gasMass
+     */
+    public void injectMass(double sma, double ecc, double mass, double criticalMass, double dustMass, double gasMass) {
+        Planet thePlanet;
+        boolean finished = false;
+        double temp, diff, dist1, dist2;
+
+// First we try to find an existing planet with an over-lapping orbit.
+        ListIterator<Planet> i = planets.listIterator();
+        while(i.hasNext()) {
+            thePlanet = i.next();
+            diff = thePlanet.sma - sma;
+
+            if(diff > 0.0) {
+                dist1 = (sma * (1.0 + ecc) * (1.0 + reducedMass)) - sma;
+                // apoapsis
+                reducedMass = Math.pow(thePlanet.mass / (1.0 + thePlanet.mass), 1.0 / 4.0);
+                dist2 = thePlanet.sma - (thePlanet.sma * (1.0 - thePlanet.eccentricity) * (1.0 - reducedMass));
             } else {
-                prevPlanet = thePlanet;
+                dist1 = sma - (sma * (1.0 - ecc) * (1.0 - reducedMass));
+                // periapsis
+                reducedMass = Math.pow(thePlanet.mass / (1.0 + thePlanet.mass), 1.0 / 4.0);
+                dist2 = (thePlanet.sma * (1.0 + thePlanet.eccentricity) * (1.0 + reducedMass)) - thePlanet.sma;
+            }
+
+            if(Math.abs(diff) <= Math.abs(dist1) || Math.abs(diff) <= Math.abs(dist2)) {
+                // This is where the magic happens
+                double newSMA = (thePlanet.mass + mass) / ((thePlanet.mass / thePlanet.sma) + (mass / sma));
+
+                temp = thePlanet.mass * Math.sqrt(thePlanet.sma) * Math.sqrt(1.0 - Math.pow(thePlanet.eccentricity, 2.0));
+                temp = temp + (mass * Math.sqrt(sma) * Math.sqrt(Math.sqrt(1.0 - Math.pow(ecc, 2.0))));
+                temp = temp / ((thePlanet.mass + mass) * Math.sqrt(newSMA));
+                temp = 1.0 - Math.pow(temp, 2.0);
+                if(temp < 0.0 || temp >= 1.0) {
+                    temp = 0.0;
+                }
+                ecc = Math.sqrt(temp);
+
+                if(doMoons) {
+                    double existingMass = 0.0;
+
+                    ListIterator<Planet> li = thePlanet.moons.listIterator();
+                    while(li.hasNext()) {
+                        existingMass += li.next().mass;
+                    }
+
+                    if(mass < criticalMass) {
+                        if(SystemObject.massInEarthMasses(mass) < 2.5 && SystemObject.massInEarthMasses(mass) > .0001 && existingMass < thePlanet.mass * .05) {
+                            Planet theMoon = new Planet(this.centralBody);
+
+                            theMoon.sma = sma;
+                            theMoon.eccentricity = ecc;
+                            theMoon.mass = mass;
+                            theMoon.dustMass = dustMass;
+                            theMoon.gasMass = gasMass;
+                            theMoon.isMoon = true;
+
+                            if(theMoon.dustMass + theMoon.gasMass > thePlanet.dustMass + thePlanet.gasMass) {
+                                double tempDust = thePlanet.dustMass;
+                                double tempGas  = thePlanet.gasMass;
+                                double tempMass = thePlanet.mass;
+
+                                thePlanet.dustMass = theMoon.dustMass;
+                                thePlanet.gasMass = theMoon.gasMass;
+                                thePlanet.mass = theMoon.mass;
+
+                                theMoon.dustMass = tempDust;
+                                theMoon.gasMass = tempGas;
+                                theMoon.mass = tempMass;
+                            }
+
+                            thePlanet.moons.add(theMoon);
+                            finished = true;
+
+                            if(verbose) {
+                                java.lang.System.out.println("Moon Captured... " + String.format("%1$,.2f", thePlanet.sma) + "AU (" +
+                                    String.format("%1$,.2f", thePlanet.massInEarthMasses()) + "EM) <- " + String.format("%1$,.2f", Planet.massInEarthMasses(mass)) + "EM");
+                            }
+                        }
+                    }
+                }
+
+                if(!finished) {
+                    if(verbose) {
+                        java.lang.System.out.println("Collision between two planetesimals: " + String.format("%1$,.2f", thePlanet.sma) + " AU (" +
+                            String.format("%1$,.2f", thePlanet.massInEarthMasses()) + "EM), " + String.format("%1$,.2f", sma) + " AU (" +
+                            String.format("%1$,.2f", SystemObject.massInEarthMasses(mass)) + "EM = " + String.format("%1$,.2f", SystemObject.massInEarthMasses(dustMass)) +
+                            "EM dust + " + String.format("%1$,.2f", SystemObject.massInEarthMasses(gasMass)) + "EM gas [" +
+                            String.format("%1$,.2f", SystemObject.massInEarthMasses(criticalMass)) + "EM])-> " + String.format("%1$,.2f", newSMA) + " AU (" + String.format("%1$,.2f", ecc) + ")");
+                    }
+                    thePlanet.sma = newSMA;
+                    thePlanet.eccentricity = ecc;
+                    thePlanet.mass += mass;
+                    thePlanet.dustMass += dustMass;
+                    thePlanet.gasMass += gasMass;
+                    if(thePlanet.mass >= criticalMass) {
+                        thePlanet.gasGiant = true;
+                    }
+                    // planets.add(thePlanet); // The planet already exists, don't duplicate it
+                }
+
+                finished = true;
+                break;
             }
         }
 
@@ -465,10 +590,10 @@ public class System {
     }
 
     private void sortPlanetsBySMA(ArrayList<Planet> list) {
-        // TODO: implement comparable and all that shit.
+        Collections.sort(list);
     }
 
-    private void checkMasses() {
+    private void checkPlanets() {
         ListIterator<Planet> i;
         Planet p;
 
@@ -483,76 +608,57 @@ public class System {
         i = this.failedPlanets.listIterator();
         while(i.hasNext()) {
             p = i.next();
-            coalescePlanetesimals(p.sma, p.eccentricity, p.mass, criticalMass(p.sma, p.eccentricity), p.dustMass, p.gasMass, p.periapsis(), p.apoapsis(), true);
-            // TODO: Remove the moon from the list if it was removed via coalescence.
+            injectMass(p.sma, p.eccentricity, p.mass, criticalMass(p.sma, p.eccentricity), p.dustMass, p.gasMass);
         }
+        this.failedPlanets.clear();
 
         i = this.escapedMoons.listIterator();
         while(i.hasNext()) {
             p = i.next();
-            coalescePlanetesimals(p.sma, p.eccentricity, p.mass, criticalMass(p.sma, p.eccentricity), p.dustMass, p.gasMass, p.periapsis(), p.apoapsis(), true);
-            // TODO: Remove the moon from the list if it was removed via coalescence.
+            injectMass(p.sma, p.eccentricity, p.mass, criticalMass(p.sma, p.eccentricity), p.dustMass, p.gasMass);
         }
+        this.escapedMoons.clear();
 
         // ensure nothing has a moon bigger than itself.
         i = this.planets.listIterator();
-        ArrayList<Planet> newPlanets = new ArrayList<>;
+        ArrayList<Planet> newPlanets = new ArrayList<>();
         while(i.hasNext()) {
-            Planet p = i.next();
+            p = i.next();
             if(p.numberOfMoons() > 0) {
                 // Remember that it's unsafe to remove an item during iteration, make a whole new arraylist.
+                ListIterator<Planet> m = p.moons.listIterator();
+                Planet largerMoon = p, checkMoon = null;
+                while(m.hasNext()) {
+                    checkMoon = m.next();
+                    if(checkMoon.mass > largerMoon.mass) {
+                        largerMoon = checkMoon;
+                    }
+                }
+                if(largerMoon == p) {
+                    // nothing changes
+                    newPlanets.add(p);
+                } else {
+                    // swap planets
+                    p.moons.remove(largerMoon);
+                    largerMoon.moons.addAll(p.moons);
+                    p.moons.clear();
+                    largerMoon.moons.add(p);
+                    newPlanets.add(largerMoon);
+                }
             } else {
                 newPlanets.add(p);
             }
         }
-        this.planets = newPlanets;
+        this.planets.clear();
+        this.planets.addAll(newPlanets);
 
-        boolean done = false;
-        while(!done) {
-            // iterate over each planet, check its moons, if anything changes then start over.
-            p = this.planetHead;
-            while(p != null) {
-                if(p.moonHead != null) {
-                    Planet m = p.moonHead;
-                    if(m.next == null) {
-                        if(m.mass > p.mass) {
-                            // moon is bigger than the planet it orbits.
-                            this.planetHead = swapMoonWithPlanet(this.planetHead, p, m);
-                            m.moonHead = p;
-                            p.next = null;
-                            p.isMoon = true;
-                            m.isMoon = false;
-                            break;
-                        }
-                    } else {
-                        // multiple moons makes this a bit more delicate.
-                        Planet largest = p;
-                        while(m != null) {
-                            if(largest.mass < m.mass) {
-                                largest = m;
+        // sort the planets by SMA
+        sortPlanetsBySMA(this.planets);
 
-                            }
-                            m = m.next;
-                        }
-
-                        if(largest != p) {
-                            Planet newMoonHead = removePlanet(p.moonHead, largest);
-                            this.planetHead = swapMoonWithPlanet(this.planetHead, p, largest);
-                            p.next = null;
-                            largest.moonHead = newMoonHead;
-                            largest.moonHead.append(p);
-                            p.isMoon = true;
-                            largest.isMoon = false;
-                            break;
-                        }
-                    }
-                }
-                p = p.next;
-            }
-            if(p == null) {
-                // we've reached the end
-                done = true;
-            }
+        // ensure each planet has a correct mass and a type
+        i = this.planets.listIterator();
+        while(i.hasNext()) {
+            i.next().validate(false);
         }
     }
 
@@ -580,22 +686,6 @@ public class System {
         this.cloudEccentricity = 0.2; // TODO: not entirely sure what this represents in the process, come back to it.
     }
 
-    public int numberOfFailedPlanets() {
-        return failedPlanets.size();
-    }
-
-    public int numberOfEscapedMoons() {
-        return escapedMoons.size();
-    }
-
-    public double massOfFailedPlanets() {
-        return sumMassOfPlanets(failedPlanets);
-    }
-
-    public double massOfEscapedMoons() {
-        return sumMassOfPlanets(escapedMoons);
-    }
-
     public int numberOfMoons() {
         int moons = 0;
         ListIterator<Planet> i = planets.listIterator();
@@ -621,8 +711,6 @@ public class System {
         String cr = java.lang.System.lineSeparator();
         String str = "New System (seed: " + Utils.instance().getSeed() + ")" + cr;
         str = str.concat("Primary: " + centralBody.toString() + cr);
-        str = str.concat("Failed planets: " + numberOfFailedPlanets() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfFailedPlanets())) + "EM)" + cr);
-        str = str.concat("Escaped Moons: " + numberOfEscapedMoons() + " (" + String.format("%1$,.4f", SystemObject.massInEarthMasses(massOfEscapedMoons())) + "EM)" + cr);
         str = str.concat("Captured Moons: " + numberOfMoons() + cr);
         str = str.concat(cr);
         ListIterator i = this.planets.listIterator();

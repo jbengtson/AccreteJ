@@ -47,10 +47,6 @@ public class Star extends SystemObject {
         }
     }
 
-    public double radiusInMeters() {
-        return this.radius * SUN_RADIUS;
-    }
-
     public double stellarDustLimit() {
         return 200.0 * Math.pow(this.mass, 1.0 / 3.0);
     }

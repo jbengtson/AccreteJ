@@ -33,7 +33,7 @@ class Utils {
         PPM_PRESSURE = EARTH_SURF_PRES_IN_MILLIBARS / 1000000.0;
 
     private Utils() {
-        seed = java.lang.System.currentTimeMillis();
+        seed = java.lang.System.currentTimeMillis(); // 1528144920680 generates an Earthlike
         random = new Random(seed);
         loadChemicals();
         loadStars();

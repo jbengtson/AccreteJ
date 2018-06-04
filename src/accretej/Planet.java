@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.ListIterator;
 
-public class Planet extends SystemObject {
+public class Planet extends SystemObject implements Comparable<Planet> {
     protected double
         axialTilt = 0.0,
         radius = 0.0, // in km
@@ -50,6 +50,34 @@ public class Planet extends SystemObject {
     protected ArrayList<Planet> moons = new ArrayList<>();
     protected ArrayList<AtmosphericChemical> atmosphere = new ArrayList<>();
 
+    @Override
+    public int compareTo(Planet p) {
+        if(this.isMoon) {
+            if(p.isMoon) {
+                if(p.asMoonSMA > this.asMoonSMA) {
+                    return -1;
+                }
+                if(p.asMoonSMA < this.asMoonSMA) {
+                    return 1;
+                }
+            } else {
+                return 0; // not comparable
+            }
+        } else {
+            if(p.isMoon) {
+                return 0; // not comparable
+            } else {
+                if(p.sma > this.sma) {
+                    return -1;
+                }
+                if(p.sma < this.sma) {
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+
     protected enum atmosphereType {
         NONE,
         BREATHABLE,
@@ -74,6 +102,30 @@ public class Planet extends SystemObject {
 
     public Planet(Star primary) {
         this.primary = primary;
+    }
+
+    /**
+     * Ensures this planets and its moons have a correct mass and type
+     */
+    public void validate(boolean moon) {
+        this.isMoon = moon;
+/*
+        if(this.dustMass + this.gasMass != this.mass) {
+            java.lang.System.out.println("Unequal masses: Dust Mass: " + String.format("%.3E", massInKg(this.dustMass)) + " kg, Gas Mass: " + String.format("%.3E", massInKg(this.gasMass)) + " kg, Mass: " + String.format("%.3E", massInKg(this.mass)) + " kg, Difference: " + String.format("%.3E", massInKg(this.mass - (this.dustMass + this.gasMass))) + " kg");
+            if(this.gasMass == 0.0) {
+                java.lang.System.out.println("No gas mass, ignoring difference.");
+            } else {
+
+            }
+        }
+*/
+        // validate all the moons
+        if(!moon) {
+            ListIterator<Planet> m = this.moons.listIterator();
+            while(m.hasNext()) {
+                m.next().validate(true);
+            }
+        }
     }
 
     /**
@@ -119,6 +171,7 @@ public class Planet extends SystemObject {
             this.density = volumeDensity();
             this.surfaceAcceleration = gravitationalAcceleration();
             this.surfaceGravity = gravity();
+            this.type = planetType.tUnknown; // Basic initialization.
 
             if(this.gasMass / this.mass > 0.000001) {
                 double h2Mass = this.gasMass * 0.85;
@@ -197,7 +250,7 @@ public class Planet extends SystemObject {
                 }
             } else if(this.surfacePressure > 6000.0 && this.minimumMolecularWeight <= 2.0) { // Retains Hydrogen
                 this.type = planetType.tSubSubGasGiant;
-                this.atmosphere = null;
+                this.atmosphere.clear();
             } else { // Atmospheres:
                 if(secondsToHoursRounded(this.dayLength) == secondsToHoursRounded(this.orbitalPeriod) || this.resonantPeriod) {
                     this.type = planetType.tTidallyLocked;
@@ -244,6 +297,7 @@ public class Planet extends SystemObject {
                     }
                 } else {
                     // TODO: here we have a moon that isn't a moon?
+                    throw new IllegalArgumentException("Planet exists as part of a moon list but isn't a moon!");
                 }
             }
         }
@@ -335,10 +389,6 @@ public class Planet extends SystemObject {
 
     public double radiusInMeters() {
         return this.radius * 1000.0;
-    }
-
-    public double radiusInEarthRadii() {
-        return radiusInMeters() / EARTH_RADIUS;
     }
 
     public double ratioRadiusToEarth() {
