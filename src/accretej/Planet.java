@@ -90,6 +90,7 @@ public class Planet extends SystemObject implements Comparable<Planet> {
         tSubSubGasGiant,
         tSubGasGiant,
         tGasGiant,
+        tSuperEarth,
         tRock,
         tVenusian,
         tTerrestrial,
@@ -249,8 +250,17 @@ public class Planet extends SystemObject implements Comparable<Planet> {
                     this.type = planetType.tRock;
                 }
             } else if(this.surfacePressure > 6000.0 && this.minimumMolecularWeight <= 2.0) { // Retains Hydrogen
-                this.type = planetType.tSubSubGasGiant;
-                this.atmosphere.clear();
+                // This might qualify as a Super-Earth since they tend to have rock densities.
+                if(this.density < 2.0) {
+                    this.type = planetType.tSubSubGasGiant;
+                    this.atmosphere.clear();
+                } else {
+                    if(this.atmosphere.size() > 0) {
+                        this.type = planetType.tSuperEarth;
+                    } else {
+                        this.type = planetType.tRock;
+                    }
+                }
             } else { // Atmospheres:
                 if(secondsToHoursRounded(this.dayLength) == secondsToHoursRounded(this.orbitalPeriod) || this.resonantPeriod) {
                     this.type = planetType.tTidallyLocked;
@@ -1165,6 +1175,8 @@ public class Planet extends SystemObject implements Comparable<Planet> {
                 return "sub Gas Giant";
             case tGasGiant:
                 return "Gas Giant";
+            case tSuperEarth:
+                return "Super Earth";
             case tRock:
                 return "Rock";
             case tVenusian:
